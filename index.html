@@ -131,7 +131,7 @@
     .line.cur { font-size: 1.6rem; } .gate-line { font-size: 1.5rem; padding: 4px 8px; } .work { font-size: 1.5rem; }
     .choice { min-width: 130px; font-size: 1.05rem; padding: 8px 10px; }
     .gemdas span:not(.pair) { min-width: 30px; padding: 2px 2px; } .gemdas i { display: none; } .gemdas { gap: 6px; }
-    .ask { font-size: 1.2rem; } .stats { font-size: 0.85rem; min-width: 0; }
+    .ask { font-size: 1.2rem; } .stats { font-size: 0.85rem; min-width: 0; } .topbar { flex-wrap: wrap; row-gap: 2px; } .topbar .ptitle { min-width: 0; }
     button.yn { padding: 12px 28px; min-width: 100px; }
   }
 
@@ -150,6 +150,17 @@
   .mixed-card { background: white; border: 2px dashed #bbb; border-radius: 10px; padding: 12px; text-align: center; margin-top: 18px; color: #666; }
   .mixed-card.open { border: 2px solid #28a745; color: #1e7e34; }
   .layout > * { min-width: 0; }
+  .own-door { width: 100%; background: white; color: #222; border: 3px dashed #0066cc; border-radius: 16px; padding: 14px; display: flex; align-items: center; gap: 14px; justify-content: center; text-align: left; }
+  .own-door:hover { background: #f2f8ff; }
+  .own-door .em { font-size: 2.4rem; } .own-door .dn { font-size: 1.35rem; font-weight: bold; color: #0066cc; } .own-door small { color: #666; font-size: 0.9rem; }
+  .cu-row { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+  .cu-amt { font-size: 1.4rem; width: 130px; padding: 8px 10px; border: 2px solid #ccc; border-radius: 8px; text-align: center; font-family: inherit; }
+  .cu-amt:focus, .usel:focus { outline: none; border-color: #0066cc; }
+  .usel { font-size: 1.15rem; padding: 9px 8px; border: 2px solid #ccc; border-radius: 8px; font-family: inherit; background: white; max-width: 100%; }
+  .cu-and { font-weight: bold; color: #555; }
+  #cuMsg, #cuMsg2 { color: #a35a00; }
+  #answerInput2 { font-size: 1.8rem; width: 110px; padding: 6px 10px; border: 2px solid #ccc; border-radius: 8px; text-align: center; font-family: inherit; font-weight: bold; }
+  .gate-line .frac, .question .frac, .work .frac, .did .frac, .final-answer .frac { font-size: 0.75em; }
   .layout { display: grid; grid-template-columns: 200px 1fr; gap: 16px; margin-top: 10px; align-items: start; }
   .ladder { background: white; border: 2px solid #ddd; border-radius: 10px; padding: 10px; font-size: 0.95rem; }
   .ladder-title { font-weight: bold; font-size: 0.9rem; color: #555; margin-bottom: 6px; text-align: center; }
@@ -186,6 +197,7 @@
     .question { font-size: 1.3rem; } .gate-line { white-space: normal; font-size: 1.35rem; } .work { font-size: 1.4rem; } .input-area input { width: 110px; }
     .dirs .choice { min-width: 0; width: 100%; }
     .unit-btn { min-width: 0; padding: 8px 12px; font-size: 1rem; }
+    .cu-amt { width: 100px; } .usel { font-size: 1rem; } #answerInput2 { width: 80px; font-size: 1.4rem; } .input-area input { width: 80px; }
   }
 </style>
 
@@ -200,6 +212,34 @@
     <button class="door" data-fam="capacity" onclick="openFamily('capacity')"><span class="em">🥛</span><span><span class="dn">Capacity</span><br><small>fluid ounces, cups, pints,<br>quarts, gallons</small></span></button>
     <button class="door" data-fam="weight" onclick="openFamily('weight')"><span class="em">⚖️</span><span><span class="dn">Weight</span><br><small>ounces, pounds, tons</small></span></button>
     <button class="door" data-fam="length" onclick="openFamily('length')"><span class="em">📏</span><span><span class="dn">Length</span><br><small>inches, feet, yards, miles</small></span></button>
+  </div>
+  <button class="own-door" id="ownDoor" onclick="showCustom(true)"><span class="em">✏️</span><span><span class="dn">My own problem</span><br><small>Type a problem from your worksheet or Freckle</small></span></button>
+</section>
+
+<!-- ================= CUSTOM: the kid's own problem ================= -->
+<section id="customScreen" class="hidden">
+  <div class="topbar">
+    <button class="link" onclick="showStart()">← Menu</button>
+    <div class="ptitle">✏️ My own problem</div>
+    <span class="stats"></span>
+  </div>
+  <div class="own">
+    <div class="pick-title">1. What do you have?</div>
+    <div class="cu-row"><input id="cuAmt1" class="cu-amt" autocomplete="off" aria-label="Amount" placeholder="like 3" onkeydown="if(event.key==='Enter') startCustomBoxes()"><span id="cuFrom"></span></div>
+    <div class="cu-row hidden" id="part2"><span class="cu-and">and</span><input id="cuAmt2" class="cu-amt" autocomplete="off" aria-label="Second amount" placeholder="like 5" onkeydown="if(event.key==='Enter') startCustomBoxes()"><span id="cuFrom2"></span><button class="link" onclick="togglePart2(false)" aria-label="Remove second part">✕</button></div>
+    <button class="link" id="addPart" onclick="togglePart2(true)">+ add a second part (like 2 lb <b>5 oz</b>)</button>
+    <div class="pick-title">2. Change it to…</div>
+    <div class="cu-row"><span id="cuTo"></span></div>
+    <div class="cu-row hidden" id="to2"><span class="cu-and">and</span><span id="cuToB"></span><button class="link" onclick="toggleTo2(false)" aria-label="Remove second answer unit">✕</button></div>
+    <button class="link" id="addTo" onclick="toggleTo2(true)">+ answer in two units (like ___ ft ___ in)</button>
+    <div class="start-wrap" style="margin:14px 0 4px"><button class="big" id="cuGo" onclick="startCustomBoxes()">Start ▶</button></div>
+    <div id="cuMsg" class="feedback" aria-live="polite"></div>
+  </div>
+  <div class="own" style="margin-top:14px">
+    <div class="own-title">…or type it the way it looks on your sheet</div>
+    <div class="own-row"><input id="cuText" autocomplete="off" spellcheck="false" aria-label="Type your problem" placeholder="like 3 gal = ___ qt" onkeydown="if(event.key==='Enter') startCustomText()"><button id="cuTextGo" onclick="startCustomText()">Go</button></div>
+    <div id="cuMsg2" class="feedback" aria-live="polite"></div>
+    <div class="own-help">Examples: <b>3 gal = ___ qt</b> · <b>2 lb 5 oz = ___ oz</b> · <b>50 in = ___ ft ___ in</b> · <b>how many cups in 2 1/2 quarts</b></div>
   </div>
 </section>
 
@@ -223,7 +263,7 @@
 <!-- ================= MAIN ================= -->
 <section id="mainScreen" class="hidden">
   <div class="topbar">
-    <button class="link" id="unitsBtn" onclick="showPick()">← Units</button>
+    <button class="link" id="unitsBtn" onclick="P && P.custom ? showCustom(false) : showPick()">← Units</button>
     <div class="ptitle" id="ptitle"></div>
     <div class="stats" id="stats"></div>
   </div>
@@ -509,7 +549,265 @@ function generateMixed(fam, rng, avoidQ) {
   }
 }
 
-if (typeof module !== "undefined") module.exports = { FAMILIES, unitOf, rankOf, factor, rungs, fmt, parseWhole, buildProblem, checkDir, checkNumber, hintsFor, solutionRows, generateSingle, generateMixed, makeRng, MIXED, amountRange };
+
+/* ===================== CUSTOM MODE: the kid's own problem ===================== */
+// exact fractions (BigInt) so 10 cups → 2½ quarts is exact
+function bg(a, b) { if (a < 0n) a = -a; if (b < 0n) b = -b; while (b) [a, b] = [b, a % b]; return a; }
+function Q(n, d) { n = BigInt(n); d = d === undefined ? 1n : BigInt(d); if (d < 0n) { n = -n; d = -d; } const g = bg(n, d) || 1n; return { n: n / g, d: d / g }; }
+const qadd = (a, b) => Q(a.n * b.d + b.n * a.d, a.d * b.d), qsub = (a, b) => Q(a.n * b.d - b.n * a.d, a.d * b.d);
+const qmul = (a, b) => Q(a.n * b.n, a.d * b.d), qdiv = (a, b) => Q(a.n * b.d, a.d * b.n);
+const qeq = (a, b) => a.n === b.n && a.d === b.d, qint = a => a.d === 1n, qnum = a => Number(a.n) / Number(a.d);
+const qfloor = a => Q(a.n >= 0n ? a.n / a.d : -((-a.n + a.d - 1n) / a.d));
+const UFR = { "½": [1, 2], "¼": [1, 4], "¾": [3, 4], "⅓": [1, 3], "⅔": [2, 3], "⅛": [1, 8], "⅜": [3, 8], "⅝": [5, 8], "⅞": [7, 8], "⅕": [1, 5] };
+function terminatingD(d) { while (d % 2n === 0n) d /= 2n; while (d % 5n === 0n) d /= 5n; return d === 1n; }
+function decText(q) {
+  let d = q.d, p2 = 0, p5 = 0; while (d % 2n === 0n) { d /= 2n; p2++; } while (d % 5n === 0n) { d /= 5n; p5++; }
+  const k = Math.max(p2, p5), sc = (q.n * 10n ** BigInt(k) / q.d).toString().padStart(k + 1, "0");
+  return fmt(sc.slice(0, sc.length - k)) + (k ? "." + sc.slice(sc.length - k) : "");
+}
+// {t, h}: text + HTML for an amount. dm = show decimals (kid typed a decimal)
+function qshow(q, dm) {
+  if (qint(q)) { const t = fmt(q.n.toString()); return { t, h: t }; }
+  if (dm && terminatingD(q.d) && q.d <= 10000n) { const t = decText(q); return { t, h: t }; }
+  const w = q.n / q.d, r = q.n % q.d;
+  const fr = { t: `${r}⁄${q.d}`, h: `<span class="frac"><span>${r}</span><span class="fbar"></span><span>${q.d}</span></span>` };
+  return w > 0n ? { t: `${fmt(w.toString())} ${fr.t}`, h: `${fmt(w.toString())}${fr.h}` } : fr;
+}
+// read an amount a kid types: 3, 2.5, .5, 1,000, 1/2, 2 1/2, 2½, ½, half, a half
+function parseAmount(raw) {
+  let s = String(raw == null ? "" : raw).trim().toLowerCase().replace(/\s+/g, " ");
+  if (!s) return null;
+  if (/^(a )?half( an?)?$|^one half$/.test(s)) return { q: Q(1, 2), dec: false };
+  for (const [c, [a, b]] of Object.entries(UFR)) if (s.includes(c)) { const w = s.replace(c, "").trim(); const base = w === "" ? { q: Q(0) } : parseAmount(w); if (!base || !qint(base.q)) return null; return { q: qadd(base.q, Q(a, b)), dec: false }; }
+  if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) s = s.replace(/,/g, "");
+  let m;
+  if ((m = s.match(/^(\d*)\.(\d+)$|^(\d+)$/))) { if (m[3]) return { q: Q(m[3]), dec: false }; return { q: Q(BigInt((m[1] || "0") + m[2]), 10n ** BigInt(m[2].length)), dec: true }; }
+  if ((m = s.match(/^(\d+) ?\/ ?(\d+)$/))) return /^0+$/.test(m[2]) ? null : { q: Q(m[1], m[2]), dec: false };
+  if ((m = s.match(/^(\d+)(?: and | |-)(\d+) ?\/ ?(\d+)$/))) return /^0+$/.test(m[3]) ? null : { q: qadd(Q(m[1]), Q(m[2], m[3])), dec: false };
+  if ((m = s.match(/^(\d+) and (a )?half$/))) return { q: qadd(Q(m[1]), Q(1, 2)), dec: false };
+  return null;
+}
+// unit words (oz is decided later: weight unless it sits next to capacity units)
+const ALIAS = [
+  [/^(fl\.? ?oz\.?|fluid ?ounces?|floz)$/, "capacity:floz"], [/^(c|cups?)$/, "capacity:cup"], [/^(pt|pts|pints?)$/, "capacity:pint"], [/^(qt|qts|quarts?)$/, "capacity:quart"], [/^(gal|gals|gallons?)$/, "capacity:gallon"],
+  [/^(oz|ozs|ounces?)$/, "?:oz"], [/^(lb|lbs|pounds?)$/, "weight:lb"], [/^(t|tn|tons?)$/, "weight:ton"],
+  [/^(in|ins|inch|inches|")$/, "length:in"], [/^(ft|foot|feet|')$/, "length:ft"], [/^(yd|yds|yards?)$/, "length:yd"], [/^(mi|miles?)$/, "length:mi"]
+];
+function lookupUnit(w) { w = w.toLowerCase().replace(/\.$/, ""); for (const [re, k] of ALIAS) if (re.test(w)) return k; return null; }
+const FAMWORD = { capacity: "capacity (how much something holds)", weight: "weight (how heavy)", length: "length (how long)" };
+class KidErr extends Error { constructor(m) { super(m); this.kid = true; } }
+function uName(key) { const [f, id] = key.split(":"); return unitOf(f, id); }
+
+/* Turn the kid's entry into a walk-through.
+   input = { parts: [{ amount: "2", unit: "weight:lb" }, …], to: "weight:oz", to2: "" } */
+function buildCustom(input) {
+  const parts = (input.parts || []).filter(p => p && (String(p.amount || "").trim() !== "" || p.unit));
+  if (!parts.length) throw new KidErr("Type an amount first, like 3.");
+  const got = parts.map((p, i) => {
+    if (String(p.amount || "").trim() === "") throw new KidErr(i ? "Type an amount for the second part too, or take it out." : "Type an amount first, like 3.");
+    if (/^\s*-/.test(String(p.amount))) throw new KidErr("Use an amount of 0 or more.");
+    const a = parseAmount(p.amount);
+    if (!a) throw new KidErr(`I can't read “${String(p.amount).trim()}” as an amount. Try something like 3, 2.5, or 2 1/2.`);
+    if (qnum(a.q) > 1e7) throw new KidErr("That number is too big for this app. Try a smaller one.");
+    if (a.q.d > 1000n) throw new KidErr("That fraction is too tricky for this app. Try a simpler one.");
+    if (!p.unit) throw new KidErr(i ? "Pick a unit for the second part." : "Pick the unit you're starting with.");
+    return { q: a.q, dec: a.dec, key: p.unit };
+  });
+  if (!input.to) throw new KidErr("Pick the unit you're changing to.");
+  // decide plain "oz": fluid ounces if the problem uses capacity units, otherwise weight ounces
+  const all = got.map(g => g.key).concat([input.to], input.to2 ? [input.to2] : []);
+  const capUsed = all.some(k => k.startsWith("capacity:")), fixOz = k => k === "?:oz" ? (capUsed ? "capacity:floz" : "weight:oz") : k;
+  got.forEach(g => g.key = fixOz(g.key));
+  const toK = fixOz(input.to), to2K = input.to2 ? fixOz(input.to2) : null;
+  const fam = got[0].key.split(":")[0];
+  for (const k of got.map(g => g.key).concat([toK], to2K ? [to2K] : [])) {
+    const f = k.split(":")[0];
+    if (f !== fam) { const A = uName(got[0].key), B = uName(k); throw new KidErr(`${cap(A.many)} measure ${FAMWORD[fam]} and ${B.many} measure ${FAMWORD[f]}. They can't be changed into each other. Check your units.`); }
+  }
+  const P = got.map(g => ({ q: g.q, unit: g.key.split(":")[1] }));
+  if (P.length === 2 && P[0].unit === P[1].unit) throw new KidErr(`Both parts are in ${unitOf(fam, P[0].unit).many}. Pick a different unit for one part, or add them yourself first.`);
+  const to = toK.split(":")[1], to2 = to2K ? to2K.split(":")[1] : null;
+  if (to2 && to2 === to) throw new KidErr("Pick two different units for the answer, like feet and inches, or leave the second one blank.");
+  if (to2 && rankOf(fam, to2) > rankOf(fam, to)) throw new KidErr(`Put the bigger unit first: ${unitOf(fam, to2).many} and ${unitOf(fam, to).many}.`);
+  const dm = !!input.dm || got.some(g => g.dec);
+  const sh = q => qshow(q, dm);
+  const nm = (u, q) => (qnum(q) > 0 && qnum(q) <= 1 ? u.one : u.many);
+  const W = to2 || to, WU = unitOf(fam, W);
+  const steps = [], terms = [], vals = [];
+  let anyConv = false;
+  for (const p of P) {
+    const U = unitOf(fam, p.unit);
+    if (p.unit === W) {
+      if (P.length === 1 && !to2) { steps.push({ type: "dir", answer: "same", from: p.unit, to: W }); steps.push({ type: "calc", exact: true, op: "same", a: p.q, b: Q(1), value: p.q, small: W }); }
+      terms.push(sh(p.q)); vals.push(p.q);
+    } else if (rankOf(fam, p.unit) > rankOf(fam, W)) {
+      const f = factor(fam, p.unit, W), v = qmul(p.q, Q(f)); anyConv = true;
+      steps.push({ type: "dir", answer: "down", from: p.unit, to: W });
+      steps.push({ type: "factor", big: p.unit, small: W, value: f });
+      steps.push({ type: "calc", exact: true, op: "×", a: p.q, b: Q(f), value: v, big: p.unit, small: W, part: P.length > 1 });
+      terms.push({ t: `${sh(p.q).t} × ${fmt(f)}`, h: `${sh(p.q).h} × ${fmt(f)}` }); vals.push(v);
+    } else {
+      const f = factor(fam, W, p.unit), v = qdiv(p.q, Q(f)); anyConv = true;
+      steps.push({ type: "dir", answer: "up", from: p.unit, to: W });
+      steps.push({ type: "factor", big: W, small: p.unit, value: f, up: true });
+      steps.push({ type: "calc", exact: true, op: "÷", a: p.q, b: Q(f), value: v, big: W, small: p.unit, part: P.length > 1, partUnit: p.unit });
+      terms.push({ t: `${sh(p.q).t} ÷ ${fmt(f)}`, h: `${sh(p.q).h} ÷ ${fmt(f)}` }); vals.push(v);
+    }
+  }
+  let total = vals[0];
+  if (vals.length > 1) { total = vals.reduce(qadd); steps.push({ type: "calc", exact: true, op: "+", a: vals[0], b: vals[1], value: total, small: W }); }
+  const given = { t: P.map(p => `${sh(p.q).t} ${nm(unitOf(fam, p.unit), p.q)}`).join(" "), h: P.map(p => `${sh(p.q).h} ${nm(unitOf(fam, p.unit), p.q)}`).join(" ") };
+  const L = [given];
+  const add = x => L.push(x);
+  if (anyConv || P.length > 1) {
+    if (anyConv) add({ t: terms.map(x => x.t).join(" + "), h: terms.map(x => x.h).join(" + ") });
+    if (P.length > 1 && anyConv) add({ t: vals.map(v => sh(v).t).join(" + "), h: vals.map(v => sh(v).h).join(" + ") });
+  }
+  let answer, answerT, alt = [];
+  if (to2) {
+    const T = unitOf(fam, to), f = factor(fam, to, to2);
+    if (anyConv || P.length > 1) add({ t: `${sh(total).t} ${nm(WU, total)}`, h: `${sh(total).h} ${nm(WU, total)}` });
+    steps.push({ type: "dir", answer: "up", from: to2, to });
+    steps.push({ type: "factor", big: to, small: to2, value: f, up: true });
+    const q = qfloor(qdiv(total, Q(f))), r = qsub(total, qmul(q, Q(f)));
+    steps.push({ type: "split", a: total, b: Q(f), q, r, big: to, small: to2 });
+    add({ t: `${sh(total).t} ÷ ${fmt(f)}`, h: `${sh(total).h} ÷ ${fmt(f)}` });
+    add({ t: `${sh(q).t} R ${sh(r).t}`, h: `${sh(q).h} R ${sh(r).h}` });
+    answerT = { t: `${sh(q).t} ${nm(T, q.n === 1n ? Q(1) : Q(2))} ${sh(r).t} ${nm(WU, r.n === 0n ? Q(2) : r)}`, h: `${sh(q).h} ${nm(T, q.n === 1n ? Q(1) : Q(2))} ${sh(r).h} ${nm(WU, r.n === 0n ? Q(2) : r)}` };
+    add(answerT); answer = { q, r };
+    const whole = qdiv(total, Q(f));
+    if (!qint(whole)) alt.push(`${qshow(whole, false).t} ${T.many}`), terminatingD(whole.d) && whole.d <= 100n && alt.push(`${decText(whole)} ${T.many}`);
+  } else {
+    answerT = { t: `${sh(total).t} ${nm(WU, total)}`, h: `${sh(total).h} ${nm(WU, total)}` };
+    if (!(P.length === 1 && P[0].unit === W) || true) add(answerT);
+    answer = total;
+    if (!qint(total)) {
+      // other kid-friendly ways to write it
+      if (dm) { if (qshow(total, false).t !== answerT.t.replace(/ \D.*$/, "")) alt.push(`${qshow(total, false).t} ${WU.many}`); }
+      else if (terminatingD(total.d) && total.d <= 100n) alt.push(`${decText(total)} ${WU.many}`);
+      // whole + leftover in the smallest starting unit, if that comes out whole
+      const small = P.map(p => p.unit).sort((a, b) => rankOf(fam, a) - rankOf(fam, b))[0];
+      if (rankOf(fam, small) < rankOf(fam, W)) {
+        const f = factor(fam, W, small), w = qfloor(total), left = qmul(qsub(total, w), Q(f));
+        if (qint(left) && w.n > 0n && !(P.length === 2 && P[0].unit === W && P[1].unit === small)) alt.push(`${fmt(w.n.toString())} ${nm(WU, w.n === 1n ? Q(1) : Q(2))} ${fmt(left.n.toString())} ${nm(unitOf(fam, small), left)}`);
+      }
+    }
+  }
+  // collapse "5 pints = 5 pints"
+  const lineT = L.map(x => x.t).join(" = ");
+  const lineH = L.map(x => x.h).join(" = ");
+  steps.push({ type: "gate" }); steps.push({ type: "done" });
+  steps.forEach(s => s.fam = fam);
+  const question = to2 ? `Change ${given.h} to ${unitOf(fam, to).many} and ${WU.many}.` : `How many ${WU.many} are in ${given.h}?`;
+  return { custom: true, fam, dm, spec: { kind: "custom", from: P[0].unit, to: W, toBig: to2 ? to : null, parts: P }, question, given: given.h, givenT: given.t, line: lineH, lineT, answer, answerT, alt, steps };
+}
+
+/* ---------- reading a typed problem: "3 gal = ___ qt", "how many cups in 2 quarts", "50 in = __ ft __ in" ---------- */
+function parseTyped(raw) {
+  let s = String(raw || "").toLowerCase().replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/[?!]/g, " ").replace(/\s+/g, " ").trim();
+  if (!s) throw new KidErr("Type a problem first, like 3 gal = ___ qt.");
+  let left, right;
+  let m = s.match(/^how many (.+?) (?:are |is )?(?:in|make|equal|equals) (.+)$/);
+  if (m) { right = m[1]; left = m[2]; }
+  else {
+    m = s.match(/^(?:change |convert )?(.+?)\s*(?:=|→|->|\bto\b|\binto\b|\bequals\b|\bis how many\b|\bin\b(?= *_| *\?| *(?:fl|fluid|c|cups?|pt|pints?|qt|quarts?|gal|gallons?|oz|ounces?|lbs?|pounds?|t|tons?|in|inch|inches|ft|foot|feet|yd|yards?|mi|miles?)\b))\s*(.*)$/);
+    if (!m) throw new KidErr("I couldn't tell what to change it to. Try it like this: 3 gal = ___ qt.");
+    left = m[1]; right = m[2];
+  }
+  // units on the right (blanks ignored)
+  const rw = right.replace(/_+|\?|\bhow many\b|\band\b|\bwhat\b/g, " ").replace(/\b(fl\.?|fluid) (oz|ounces?)\b/g, "floz").trim().split(/[\s,]+/).filter(Boolean);
+  const targets = [];
+  for (const w of rw) { const u = lookupUnit(w); if (u) targets.push(u); else if (!/^(are|is|in|a|an|the|there|of)$/.test(w)) throw new KidErr(`I don't know the unit “${w}”. Use units like cups, pounds, or feet.`); }
+  if (!targets.length) throw new KidErr("I couldn't find the unit to change to. Try it like this: 3 gal = ___ qt.");
+  if (targets.length > 2) throw new KidErr("Use one or two units for the answer, like ft and in.");
+  // amount + unit pairs on the left
+  let l = left.replace(/\b(fl\.?|fluid) (oz|ounces?)\b/g, "floz").replace(/(\d)\s*(['"])/g, "$1 $2").replace(/(\d)([a-z])/g, "$1 $2").replace(/\band\b(?! ?(a )?half| ?\d+ ?\/)/g, " ");
+  const words = l.split(" ").filter(Boolean);
+  const parts = []; let amt = [];
+  for (const w of words) {
+    const u = lookupUnit(w);
+    if (u && amt.length) { parts.push({ amount: amt.join(" "), unit: u }); amt = []; }
+    else if (u && /^half$/.test(amt.join(" "))) { parts.push({ amount: "half", unit: u }); amt = []; }
+    else if (u) { if (w === "in" || w === "t") continue; throw new KidErr(`Put an amount before ${w}, like 3 ${w}.`); }
+    else if (/^(a|an|of)$/.test(w) && amt.length === 0) continue;
+    else amt.push(w);
+  }
+  if (amt.length) { if (!parts.length) throw new KidErr(`I couldn't find a unit after “${amt.join(" ")}”. Try it like this: 3 gal = ___ qt.`); throw new KidErr(`What unit goes with “${amt.join(" ")}”?`); }
+  if (!parts.length) throw new KidErr("I couldn't find the amount. Try it like this: 3 gal = ___ qt.");
+  if (parts.length > 2) throw new KidErr("Use one or two parts, like 2 lb 5 oz.");
+  return { parts, to: targets[0], to2: targets[1] || "" };
+}
+
+/* ---------- checking + hints for custom steps ---------- */
+function parseExactAnswer(raw, step) {
+  const s = String(raw == null ? "" : raw).trim().toLowerCase();
+  let m;
+  if (step && step.op === "÷" && (m = s.match(/^(\d[\d,]*)\s*r\s*(\d[\d,]*(?:\.\d+)?)$/))) { const a = parseAmount(m[1]), b = parseAmount(m[2]); if (a && b) return qadd(a.q, qdiv(b.q, step.b)); }
+  const a = parseAmount(s); return a ? a.q : null;
+}
+function checkCustom(s, raw, raw2) {
+  if (s.type === "factor") return checkNumber(s, raw);
+  const empty = v => String(v == null ? "" : v).trim() === "";
+  if (s.type === "split") {
+    if (empty(raw) || empty(raw2)) return { ok: false, empty: true, msg: "Fill in both boxes: how many whole ones, and what's left over." };
+    const q = parseExactAnswer(raw), r = parseExactAnswer(raw2);
+    if (!q || !r) return { ok: false, msg: "Type numbers, like 4 and 2." };
+    if (qeq(q, s.q) && qeq(r, s.r)) return { ok: true };
+    if (qeq(qadd(qmul(q, s.b), r), s.a) && qnum(r) >= qnum(s.b)) return { ok: false, bad: true, msg: `The leftover has to be less than ${fmt(s.b.n.toString())}. Another whole ${unitOf(s.fam, s.big).one} fits!` };
+    if (!qint(q)) return { ok: false, bad: true, msg: "The first box is whole ones only, like 4." };
+    return { ok: false, bad: true, msg: "Not quite. How many whole groups fit? Then what's left over?" };
+  }
+  if (empty(raw)) return { ok: false, empty: true, msg: "Type your answer in the box first." };
+  const q = parseExactAnswer(raw, s);
+  if (!q) return { ok: false, msg: "Type a number, like 12, 2.5, or 2 1/2." };
+  if (qeq(q, s.value)) return { ok: true };
+  let msg = "Not quite. Try again!";
+  if (s.op === "×" && qeq(q, qdiv(s.a, s.b))) msg = "Careful: going down the ladder, you get <b>more</b> units. Multiply.";
+  else if (s.op === "÷" && qeq(q, qmul(s.a, s.b))) msg = "Careful: going up the ladder, you get <b>fewer</b> units. Divide.";
+  else if (s.op === "÷" && qeq(q, qfloor(s.value)) && !qint(s.value)) msg = `That's the whole ${unitOf(s.fam, s.big).many}. There's some left over too: write it as a fraction or decimal, like 2 1/2 or 2.5, or as 2 R 2.`;
+  return { ok: false, bad: true, msg };
+}
+function hintsCustom(s) {
+  if (s.type === "dir" || s.type === "factor") return hintsFor(s);
+  if (s.type !== "calc" && s.type !== "split") return [];
+  const fam = s.fam, sh = q => qshow(q, false).t;
+  if (s.type === "split") {
+    const B = unitOf(fam, s.big), S = unitOf(fam, s.small), f = s.b.n.toString();
+    return [H("rule", `${fmt(f)} ${S.many} make 1 ${B.one}. How many whole groups of ${fmt(f)} fit in ${sh(s.a)}? What's left over stays in ${S.many}.`),
+            H("count rungs", `Count by ${fmt(f)}s without going over ${sh(s.a)}: ${[1, 2, 3].map(i => fmt(String(i * Number(f)))).join(", ")}, … Then subtract to find the leftover.`)];
+  }
+  if (s.op === "same") return [H("rule", `It's the same unit, so the amount stays the same.`)];
+  if (s.op === "+") return [H("decompose", `Both parts are in ${unitOf(fam, s.small).many} now. Add them: ${sh(s.a)} + ${sh(s.b)}.`)];
+  const intA = qint(s.a), f = Number(s.b.n);
+  if (s.op === "×") {
+    if (intA && s.a.n <= 100000n) return hintsFor({ ...s, a: Number(s.a.n), b: f, value: Number(s.value.n) });
+    const w = qfloor(s.a), fr = qsub(s.a, w), B = unitOf(fam, s.big);
+    const out = [H("decompose", `${factFor(fam, s.big, s.small)} ${sh(s.a)} ${B.many} is ${w.n > 0n ? `${sh(w)} ${w.n === 1n ? B.one : B.many} + ` : ""}${sh(fr)} of a ${B.one}: ${w.n > 0n ? `${sh(w)} × ${fmt(String(f))} + ` : ""}${sh(fr)} × ${fmt(String(f))}.`)];
+    if (qeq(fr, Q(1, 2))) out.push(H("halve", `Half of ${fmt(String(f))} is ${fmt(String(f / 2))}.`));
+    else out.push(H("rule", `To find ${sh(fr)} of ${fmt(String(f))}: divide ${fmt(String(f))} by ${fr.d}, then multiply by ${fr.n}.`));
+    return out;
+  }
+  // ÷
+  if (intA && qint(s.value) && s.a.n <= 10000000n) return hintsFor({ ...s, a: Number(s.a.n), b: f, value: Number(s.value.n) });
+  const B = unitOf(fam, s.big), S = unitOf(fam, s.small);
+  return [H("rule", `${factFor(fam, s.big, s.small)} How many whole groups of ${fmt(String(f))} fit in ${sh(s.a)}?`),
+          H("decompose", `It doesn't come out even. The leftover ${S.many} are part of a ${B.one}: write the leftover on top and ${fmt(String(f))} on the bottom. Example: 2 R 1 is 2 and 1⁄${f}.`)];
+}
+function solutionRowsCustom(p) {
+  const rows = [], sh = q => qshow(q, p.dm).h;
+  for (const s of p.steps) {
+    if (s.type === "dir") rows.push(s.answer === "same" ? "Same unit: no change." : s.answer === "down" ? `${cap(unitOf(p.fam, s.from).many)} → ${unitOf(p.fam, s.to).many}: down the ladder, multiply.` : `${cap(unitOf(p.fam, s.from).many)} → ${unitOf(p.fam, s.to).many}: up the ladder, divide.`);
+    if (s.type === "factor") rows.push(`1 ${unitOf(p.fam, s.big).one} = ${fmt(s.value)} ${name(unitOf(p.fam, s.small), s.value)}`);
+    if (s.type === "calc") rows.push(s.op === "same" ? `${sh(s.a)} stays ${sh(s.value)}` : `${sh(s.a)} ${s.op} ${sh(s.b)} = ${sh(s.value)}`);
+    if (s.type === "split") rows.push(`${sh(s.a)} ÷ ${sh(s.b)} = ${sh(s.q)} R ${sh(s.r)}`);
+  }
+  rows.push(p.line);
+  return rows;
+}
+const UNIT_OPTIONS = Object.entries(FAMILIES).map(([f, F]) => ({ fam: f, label: F.name, units: [...F.units].reverse().map(u => ({ key: `${f}:${u.id}`, label: `${u.many} (${u.short})` })) }));
+
+if (typeof module !== "undefined") module.exports = { FAMILIES, unitOf, rankOf, factor, rungs, fmt, parseWhole, buildProblem, checkDir, checkNumber, hintsFor, solutionRows, generateSingle, generateMixed, makeRng, MIXED, amountRange,
+  Q, qeq, qshow, parseAmount, buildCustom, parseTyped, checkCustom, hintsCustom, solutionRowsCustom, lookupUnit, UNIT_OPTIONS };
 </script>
 
 <!-- ======================= UI ======================= -->
@@ -519,10 +817,49 @@ const pickState = { capacity: {}, weight: {}, length: {} };
 const S = { solved: 0, streak: 0, clean: {}, auto: {}, run: {}, mixed: {} };
 const FADE_AFTER = 3, UNLOCK_AFTER = 5;
 let fam = null, P = null, idx = 0, mode = "single", tries = {}, coach = {}, picked = {}, hintsShown = {}, gateLock = false, rightPick = null;
+S.clean.custom = 0; S.auto.custom = true;
 for (const f of Object.keys(FAMILIES)) { S.clean[f] = 0; S.auto[f] = true; S.run[f] = 0; S.mixed[f] = false; }
 
-function show(id) { ["startScreen", "pickScreen", "mainScreen"].forEach(x => document.getElementById(x).classList.toggle("hidden", x !== id)); window.scrollTo(0, 0); }
+function show(id) { ["startScreen", "pickScreen", "customScreen", "mainScreen"].forEach(x => document.getElementById(x).classList.toggle("hidden", x !== id)); window.scrollTo(0, 0); }
 function showStart() { show("startScreen"); }
+/* ---------- custom mode: the kid's own problem ---------- */
+const unitSelect = (id, blank) => `<select id="${id}" class="usel" aria-label="unit"><option value="">${blank}</option>${UNIT_OPTIONS.map(g => `<optgroup label="${g.label}">${g.units.map(u => `<option value="${u.key}">${u.label}</option>`).join("")}</optgroup>`).join("")}</select>`;
+function initCustom() {
+  document.getElementById("cuFrom").innerHTML = unitSelect("cuUnit1", "pick a unit");
+  document.getElementById("cuFrom2").innerHTML = unitSelect("cuUnit2", "pick a unit");
+  document.getElementById("cuTo").innerHTML = unitSelect("cuTo1", "pick a unit");
+  document.getElementById("cuToB").innerHTML = unitSelect("cuTo2", "pick a unit");
+}
+initCustom();
+["input", "change"].forEach(ev => document.getElementById("customScreen").addEventListener(ev, e => { if (e.target.id !== "cuText") document.getElementById("cuMsg").textContent = ""; else document.getElementById("cuMsg2").textContent = ""; }));
+function showCustom(clear) {
+  mode = "custom"; show("customScreen");
+  if (clear) { ["cuAmt1", "cuAmt2", "cuText"].forEach(id => document.getElementById(id).value = ""); document.getElementById("cuMsg").textContent = ""; document.getElementById("cuMsg2").textContent = ""; ["cuUnit1", "cuUnit2", "cuTo1", "cuTo2"].forEach(id => document.getElementById(id).value = ""); togglePart2(false); toggleTo2(false); }
+  document.getElementById("cuAmt1").focus();
+}
+function togglePart2(on) { document.getElementById("part2").classList.toggle("hidden", !on); document.getElementById("addPart").classList.toggle("hidden", on); if (!on) { document.getElementById("cuAmt2").value = ""; document.getElementById("cuUnit2").value = ""; } else document.getElementById("cuAmt2").focus(); }
+function toggleTo2(on) { document.getElementById("to2").classList.toggle("hidden", !on); document.getElementById("addTo").classList.toggle("hidden", on); if (!on) document.getElementById("cuTo2").value = ""; }
+function customInput() {
+  const v = id => document.getElementById(id).value;
+  const parts = [{ amount: v("cuAmt1"), unit: v("cuUnit1") }];
+  if (!document.getElementById("part2").classList.contains("hidden") && (v("cuAmt2").trim() || v("cuUnit2"))) parts.push({ amount: v("cuAmt2"), unit: v("cuUnit2") });
+  return { parts, to: v("cuTo1"), to2: document.getElementById("to2").classList.contains("hidden") ? "" : v("cuTo2") };
+}
+function startCustomBoxes() { runCustom(customInput(), "cuMsg"); }
+function startCustomText() {
+  const msg = document.getElementById("cuMsg2");
+  let inp;
+  try { inp = parseTyped(document.getElementById("cuText").value); } catch (e) { msg.textContent = e.kid ? e.message : "I couldn't read that. Try it like this: 3 gal = ___ qt."; return; }
+  // show the kid how we read it, in the boxes
+  document.getElementById("cuAmt1").value = inp.parts[0].amount; document.getElementById("cuUnit1").value = inp.parts[0].unit.replace("?:oz", inp.to.startsWith("capacity") || inp.parts[0].unit.startsWith("capacity") ? "capacity:floz" : "weight:oz");
+  runCustom(inp, "cuMsg2");
+}
+function runCustom(inp, msgId) {
+  const msg = document.getElementById(msgId);
+  let p;
+  try { p = buildCustom(inp); } catch (e) { msg.textContent = e.kid ? e.message : "Something doesn't look right. Check your amounts and units."; return; }
+  msg.textContent = ""; mode = "custom"; fam = p.fam; p.input = inp; load(p);
+}
 function openFamily(f) { fam = f; showPick(); }
 function showPick() {
   show("pickScreen");
@@ -542,6 +879,7 @@ function pickTo(u) { pickState[fam].to = u; showPick(); document.getElementById(
 function startSingle() { mode = "single"; const ps = pickState[fam]; if (!ps.from || !ps.to) return; load(generateSingle(fam, ps.from, ps.to)); }
 function startMixed() { if (!S.mixed[fam]) return; mode = "mixed"; load(generateMixed(fam)); }
 function nextProblem() {
+  if (mode === "custom") { showCustom(true); return; }
   const q = P && P.question;
   if (mode === "mixed") load(generateMixed(fam, Math.random, q));
   else { const ps = pickState[fam]; load(generateSingle(fam, ps.from, ps.to, Math.random, q)); }
@@ -552,10 +890,13 @@ function load(p) {
   show("mainScreen");
   document.getElementById("solution").classList.add("hidden");
   const F = FAMILIES[fam];
-  document.getElementById("ptitle").textContent = mode === "mixed" ? `${F.emoji} ${F.name}: mixed units` : `${F.emoji} ${cap(unitOf(fam, p.spec.from).many)} → ${unitOf(fam, p.spec.to).many}`;
+  document.getElementById("unitsBtn").textContent = p.custom ? "← Edit problem" : "← Units";
+  document.getElementById("ptitle").textContent = p.custom ? "✏️ My own problem" : mode === "mixed" ? `${F.emoji} ${F.name}: mixed units` : `${F.emoji} ${cap(unitOf(fam, p.spec.from).many)} → ${unitOf(fam, p.spec.to).many}`;
   render();
 }
 
+const hkey = () => (P && P.custom ? "custom" : fam);
+const hintsOf = s => (P && P.custom ? hintsCustom(s) : hintsFor(s));
 /* ---------- FSM transitions ---------- */
 function advance() { if (idx >= P.steps.length - 1) return; idx++; rightPick = null; if (P.steps[idx].type === "done") finish(); render(); }
 function goBack() {
@@ -565,10 +906,14 @@ function goBack() {
 }
 function finish() {
   if (P.finished) return; P.finished = true;
+  if (P.custom) {   // the kid's own problems never touch the practice streak or the mixed-units unlock
+    if (!P.revealed) { if (P.hintTaps === 0 && P.wrongs === 0) { S.clean.custom++; if (S.clean.custom >= FADE_AFTER && S.auto.custom) { S.auto.custom = false; P.fadedNow = true; } } else S.clean.custom = 0; }
+    return;
+  }
   if (P.revealed) { S.streak = 0; S.run[fam] = 0; return; }
   S.solved++; S.streak++;
   if (P.wrongs === 0) { S.run[fam]++; if (S.run[fam] >= UNLOCK_AFTER && !S.mixed[fam]) { S.mixed[fam] = true; P.unlockedNow = true; } } else S.run[fam] = 0;
-  if (P.hintTaps === 0 && P.wrongs === 0) { S.clean[fam]++; if (S.clean[fam] >= FADE_AFTER && S.auto[fam]) { S.auto[fam] = false; P.fadedNow = true; } }
+  if (P.hintTaps === 0 && P.wrongs === 0) { S.clean[fam]++; if (S.clean[fam] >= FADE_AFTER && S.auto[hkey()]) { S.auto[hkey()] = false; P.fadedNow = true; } }
   else S.clean[fam] = 0;
 }
 function pickDir(d) {
@@ -578,28 +923,46 @@ function pickDir(d) {
   (picked[idx] || (picked[idx] = [])).push(d); coach[idx] = r.msg; P.wrongs++; render();
 }
 function submitAnswer() {
-  const s = P.steps[idx]; if (s.type !== "factor" && s.type !== "calc") return;
+  const s = P.steps[idx];
+  if (s.type === "split") return submitSplit();
+  if (s.type !== "factor" && s.type !== "calc") return;
   const el = document.getElementById("answerInput"), raw = el.value;
-  const r = checkNumber(s, raw);
-  if (r.ok) { delete coach[idx]; advance(); return; }
+  const r = P.custom ? checkCustom(s, raw) : checkNumber(s, raw);
+  if (r.ok) { delete coach[idx]; if (P.custom && P.steps[idx + 1].type === "gate") paperForm(/\d\.\d|^\.\d/.test(raw)); advance(); return; }
   coach[idx] = r.msg;
-  if (!r.empty && parseWhole(raw) !== null) {
+  if (!r.empty && (r.bad || parseWhole(raw) !== null)) {
     (tries[idx] || (tries[idx] = [])).push(raw.trim()); P.wrongs++;
-    if (S.auto[fam] && (hintsShown[idx] || 0) < hintsFor(s).length) hintsShown[idx] = (hintsShown[idx] || 0) + 1;
+    if (S.auto[hkey()] && (hintsShown[idx] || 0) < hintsOf(s).length) hintsShown[idx] = (hintsShown[idx] || 0) + 1;
   }
   render();
   const e2 = document.getElementById("answerInput"); if (e2) { e2.value = ""; e2.focus(); }
 }
+// Custom: if the kid answered with a decimal, the paper line uses decimals too (when it ends).
+function paperForm(dec) {
+  if (!P.base) P.base = { line: P.line, lineT: P.lineT, answerT: P.answerT, alt: P.alt, dm: P.dm };
+  let f = P.base;
+  if (dec && !P.base.dm && P.input) { try { const d = buildCustom({ ...P.input, dm: true }); if (d.lineT !== P.base.lineT) f = d; } catch (e) {} }
+  ["line", "lineT", "answerT", "alt", "dm"].forEach(k => P[k] = f[k]);
+}
+function submitSplit() {
+  const s = P.steps[idx], a = document.getElementById("answerInput").value, b = document.getElementById("answerInput2").value;
+  const r = checkCustom(s, a, b);
+  if (r.ok) { delete coach[idx]; advance(); return; }
+  coach[idx] = r.msg;
+  if (r.bad) { (tries[idx] || (tries[idx] = [])).push(`${a.trim()} R ${b.trim()}`); P.wrongs++; if (S.auto[hkey()] && (hintsShown[idx] || 0) < hintsOf(s).length) hintsShown[idx] = (hintsShown[idx] || 0) + 1; }
+  render();
+}
 function tapHint() {
-  const s = P.steps[idx], hs = hintsFor(s);
+  const s = P.steps[idx], hs = hintsOf(s);
   if (!hs.length || (hintsShown[idx] || 0) >= hs.length) return;
-  hintsShown[idx] = (hintsShown[idx] || 0) + 1; P.hintTaps++; S.clean[fam] = 0; S.auto[fam] = true; render();
+  hintsShown[idx] = (hintsShown[idx] || 0) + 1; P.hintTaps++; S.clean[hkey()] = 0; S.auto[hkey()] = true; render();
 }
 function gateTapped(cb) { if (!cb.checked || gateLock) return; gateLock = true; setTimeout(() => { gateLock = false; advance(); }, 300); }
 function showSolution() {
   if (!P) return;
-  P.revealed = true; S.streak = 0; S.clean[fam] = 0; S.run[fam] = 0;
-  const rows = solutionRows(P);
+  P.revealed = true;
+  if (P.custom) S.clean.custom = 0; else { S.streak = 0; S.clean[fam] = 0; S.run[fam] = 0; }
+  const rows = P.custom ? solutionRowsCustom(P) : solutionRows(P);
   const el = document.getElementById("solution");
   el.innerHTML = `<h3>The whole solution</h3>${rows.map((r, i) => `<div class="sol-row"><span class="${i === rows.length - 1 ? "expr" : ""}" style="${i === rows.length - 1 ? "font-size:1.3rem;font-weight:bold" : ""}">${r}</span></div>`).join("")}
     <div class="sol-note">Seeing the solution is OK when you're stuck. This one won't count as solved. Next time, try a 💡 hint first!</div>
@@ -610,15 +973,16 @@ function showSolution() {
 function hideSolution() { document.getElementById("solution").classList.add("hidden"); render(); }
 
 /* ---------- rendering ---------- */
-function curDir() { const d = P.steps[0]; return idx > 0 ? d.answer : rightPick; }
+function activeDir() { for (let i = idx; i >= 0; i--) if (P.steps[i].type === "dir") return { s: P.steps[i], done: i < idx }; return { s: P.steps.find(x => x.type === "dir"), done: false }; }
+function curDir() { const a = activeDir(); return a.s ? (a.done ? a.s.answer : rightPick) : null; }
 function renderLadder() {
-  const F = FAMILIES[fam], us = [...F.units].reverse(), s0 = P.steps[0];
+  const F = FAMILIES[fam], us = [...F.units].reverse(), s0 = activeDir().s;
   const dir = curDir();
   const lo = Math.min(rankOf(fam, s0.from), rankOf(fam, s0.to)), hi = Math.max(rankOf(fam, s0.from), rankOf(fam, s0.to));
-  const fromIds = P.spec.kind === "mixed" ? P.spec.parts.map(p => p.unit) : [s0.from];
+  const fromIds = P.spec.parts ? P.spec.parts.map(p => p.unit) : [s0.from];
   let h = `<div class="ladder-title">📋 ${F.name} ladder</div><div class="lad">`;
   us.forEach((u, i) => {
-    const isFrom = fromIds.includes(u.id), isTo = u.id === P.spec.to;
+    const isFrom = fromIds.includes(u.id), isTo = u.id === P.spec.to || u.id === P.spec.toBig;
     const cls = isTo && dir ? "to" : isFrom ? "from" : isTo ? "to" : "";
     h += `<div class="lu ${cls}" data-u="${u.id}">${isFrom && isTo ? `<span class="tagu">same</span>` : isFrom ? `<span class="tagu">from</span>` : isTo ? `<span class="tagu">to</span>` : ""}${u.many} <small>(${u.short})</small></div>`;
     const nx = us[i + 1];
@@ -632,6 +996,7 @@ function renderLadder() {
   if (F.extra.length) h += `<div class="lad-extra">${F.extra.map(([a, b]) => `1 ${unitOf(fam, a).short} = ${fmt(factor(fam, a, b))} ${unitOf(fam, b).short}`).join("<br>")}</div>`;
   const el = document.getElementById("ladder"); el.innerHTML = h; el.classList.toggle("go", !!dir);
 }
+function answerHTML() { return P.custom ? P.answerT.h : `${fmt(P.answer)} ${name(unitOf(fam, P.spec.to), P.answer)}`; }
 function render() {
   const s = P.steps[idx];
   renderLadder();
@@ -640,14 +1005,15 @@ function render() {
     (dir ? `<div class="dirbadge ${dir}" id="dirBadge">${dir === "down" ? "⬇ Down the ladder to a smaller unit → multiply ×" : dir === "up" ? "⬆ Up the ladder to a bigger unit → divide ÷" : "= Same unit → no change"}</div>` : `<div class="dirbadge unknown" id="dirBadge">Which way on the ladder? ⬆ or ⬇</div>`);
   const box = document.getElementById("step");
   let html = "";
-  const hs = hintsFor(s), shown = hintsShown[idx] || 0;
+  const hs = hintsOf(s), shown = hintsShown[idx] || 0;
+  const N = v => (v && typeof v === "object" ? qshow(v, P.dm).h : fmt(v));
   const hintBlock = shown ? `<div class="hints">${hs.slice(0, shown).map(h => `<div class="hintline"><span class="tag">${h.tag}</span>${h.text}</div>`).join("")}</div>` : "";
   const coachBlock = coach[idx] ? `<div id="feedback" class="feedback coach">${coach[idx]}</div>` : `<div id="feedback" class="feedback"></div>`;
   const input = (label, unit) => `<input id="answerInput" inputmode="numeric" autocomplete="off" aria-label="${label}" onkeydown="if(event.key==='Enter') submitAnswer()">${unit ? `<span class="unitlabel">${unit}</span>` : ""}<button class="check" onclick="submitAnswer()">Check</button>`;
   const triesBlock = (tries[idx] || []).length ? `<div class="tries">${tries[idx].map(v => `<span class="try">${v.replace(/</g, "&lt;")} ✗</span>`).join("")}</div>` : "";
   if (s.type === "dir") {
     const F = unitOf(fam, s.from), T = unitOf(fam, s.to), wrong = new Set(picked[idx] || []);
-    html += `<div class="ask">Which way on the ladder?</div><div class="sub">From <b>${P.spec.kind === "mixed" ? "bigger units" : F.many}</b> to <b>${T.many}</b></div>`;
+    html += `<div class="ask">Which way on the ladder?</div><div class="sub">From <b>${P.spec.kind === "mixed" ? "bigger units" : F.many}</b> to <b>${T.many}</b></div>${P.custom && P.steps.filter(x => x.type === "dir").length > 1 ? `<div class="mini-note">This problem has more than one change. This one is ${F.many} → ${T.many}.</div>` : ""}`;
     html += `<div class="dirs">${["down", "up", "same"].map(d => `<button class="choice ${wrong.has(d) ? "wrong" : ""} ${rightPick === d ? "right" : ""}" data-dir="${d}" ${wrong.has(d) ? "disabled" : ""} onclick="pickDir('${d}')"><span class="sym">${wrong.has(d) ? "✗" : rightPick === d ? "✓" : { down: "⬇", up: "⬆", same: "=" }[d]}</span>${DIRNAME[d].slice(2)}</button>`).join("")}</div>`;
     html += coachBlock + hintBlock;
   } else if (s.type === "factor") {
@@ -658,16 +1024,23 @@ function render() {
   } else if (s.type === "calc") {
     const Sm = unitOf(fam, s.small);
     let ask, work;
-    if (s.op === "×") { ask = P.spec.kind === "mixed" ? `Change the ${fmt(s.a)} ${name(unitOf(fam, s.big), s.a)} to ${Sm.many}: multiply` : "Now multiply"; work = `${fmt(s.a)} × ${fmt(s.b)} =`; }
-    else if (s.op === "÷") { ask = "Now divide"; work = `${fmt(s.a)} ÷ ${fmt(s.b)} =`; }
+    if (s.op === "×") { ask = P.spec.kind === "mixed" || s.part ? `Change the ${N(s.a)} ${unitOf(fam, s.big).many} to ${Sm.many}: multiply` : "Now multiply"; work = `${N(s.a)} × ${N(s.b)} =`; }
+    else if (s.op === "÷") { ask = s.part ? `Change the ${N(s.a)} ${unitOf(fam, s.small).many} to ${unitOf(fam, s.big).many}: divide` : "Now divide"; work = `${N(s.a)} ÷ ${N(s.b)} =`; }
     else if (s.op === "half") { ask = "Now take half"; work = `${fmt(s.a)} ÷ 2 =`; }
     else if (s.op === "same") { ask = "Same unit: what's the number?"; work = `${P.given} =`; }
-    else { ask = `Add the parts (both in ${Sm.many} now)`; work = `${fmt(s.a)} + ${fmt(s.b)} =`; }
+    else { ask = `Add the parts (both in ${Sm.many} now)`; work = `${N(s.a)} + ${N(s.b)} =`; }
     html += `<div class="ask">${ask}</div><div class="input-area"><span class="work">${work}</span>${input("Your answer", s.op === "×" || s.op === "+" || s.op === "half" || s.op === "same" ? Sm.short : unitOf(fam, s.big).short)}</div>`;
+    if (P.custom && s.op === "÷" && !(s.value.d === 1n)) html += `<div class="mini-note">It won't come out even. You can type a fraction (2 1/2), a decimal (2.5), or a remainder (2 R 2).</div>`;
+    html += triesBlock + coachBlock + hintBlock;
+  } else if (s.type === "split") {
+    const B = unitOf(fam, s.big), Sm = unitOf(fam, s.small);
+    html += `<div class="ask">How many whole <b>${B.many}</b>? What's left over?</div><div class="sub">Divide, and keep the remainder in ${Sm.many}.</div>`;
+    html += `<div class="input-area"><span class="work">${N(s.a)} ÷ ${N(s.b)} =</span><input id="answerInput" inputmode="numeric" autocomplete="off" aria-label="Whole ${B.many}" onkeydown="if(event.key==='Enter') document.getElementById('answerInput2').focus()"><span class="unitlabel">${B.short}</span><input id="answerInput2" inputmode="text" autocomplete="off" aria-label="${Sm.many} left over" onkeydown="if(event.key==='Enter') submitAnswer()"><span class="unitlabel">${Sm.short}</span><button class="check" onclick="submitAnswer()">Check</button></div>`;
     html += triesBlock + coachBlock + hintBlock;
   } else if (s.type === "gate") {
-    html += `<div class="did">✓ Correct! ${P.given} = ${fmt(P.answer)} ${name(unitOf(fam, P.spec.to), P.answer)}</div>`;
+    html += `<div class="did">✓ Correct! ${P.given} = ${answerHTML()}</div>`;
     html += `<div class="gate-head">✏️ Write it on your paper</div><div class="gate-text">Write this on your paper:</div><div class="gate-line" id="gateLine">${P.line}</div>`;
+    if (P.alt && P.alt.length) html += `<div class="gate-note" id="altNote">Same amount, written other ways: <b>${P.alt.join("</b> or <b>")}</b>. Use the way your worksheet asks for.</div>`;
     html += `<label class="gate-check"><input type="checkbox" id="gateBox" onchange="gateTapped(this)" onkeydown="if(event.key==='Enter'){this.checked=true;gateTapped(this)}"> I wrote it</label>`;
   }
   box.innerHTML = html;
@@ -678,16 +1051,17 @@ function render() {
   if (s.type === "done") {
     fin.classList.remove("hidden");
     const head = P.revealed ? "Finished! This one doesn't count because you saw the solution. Try the next one on your own 💪" : "🎉 You did it! Does your paper match?";
-    fin.innerHTML = `<div style="font-size:1rem;font-weight:normal;margin-bottom:6px">${head}</div><div style="font-size:1.5rem">${P.given} = ${fmt(P.answer)} ${name(unitOf(fam, P.spec.to), P.answer)}</div>`
+    fin.innerHTML = `<div style="font-size:1rem;font-weight:normal;margin-bottom:6px">${head}</div><div style="font-size:1.5rem">${P.given} = ${answerHTML()}</div>`
+      + (P.custom && !P.revealed ? `<div class="mini-note">Your own problems don't change your ⭐ and 🔥. They're just for checking your work.</div>` : "")
       + (P.unlockedNow ? `<div class="unlock">🔓 You got ${UNLOCK_AFTER} in a row! <b>Mixed units</b> are unlocked for ${FAMILIES[fam].name.toLowerCase()}.</div>` : "")
       + (P.fadedNow ? `<div class="faded-note">You're on a roll! Hints will stay out of the way now. Tap 💡 Hint any time you want one.</div>` : "")
-      + `<div class="controls" style="margin-top:14px"><button id="nextBtn" class="big" onclick="nextProblem()">Next problem →</button>${P.unlockedNow ? `<button id="tryMixedBtn" class="big" style="background:#28a745" onclick="startMixed()">Try mixed units</button>` : ""}</div>`
-      + `<div><button class="link" id="changeBtn" onclick="showPick()">Change units</button></div>`;
+      + `<div class="controls" style="margin-top:14px"><button id="nextBtn" class="big" onclick="nextProblem()">${P.custom ? "Type another problem →" : "Next problem →"}</button>${P.unlockedNow ? `<button id="tryMixedBtn" class="big" style="background:#28a745" onclick="startMixed()">Try mixed units</button>` : ""}</div>`
+      + (P.custom ? "" : `<div><button class="link" id="changeBtn" onclick="showPick()">Change units</button></div>`);
   } else fin.classList.add("hidden");
 
   document.getElementById("backBtn").disabled = idx === 0;
-  const hb = document.getElementById("hintBtn"), hintable = ["dir", "factor", "calc"].includes(s.type);
-  hb.className = (hintable ? "" : "hidden ") + (S.auto[fam] ? "auto" : "faded");
+  const hb = document.getElementById("hintBtn"), hintable = ["dir", "factor", "calc", "split"].includes(s.type);
+  hb.className = (hintable ? "" : "hidden ") + (S.auto[hkey()] ? "auto" : "faded");
   hb.disabled = !hs.length || shown >= hs.length;
   hb.textContent = !hs.length || shown < hs.length ? (shown ? `💡 Another hint (${shown}/${hs.length})` : "💡 Hint") : "💡 No more hints";
   const solOpen = !document.getElementById("solution").classList.contains("hidden");
@@ -696,7 +1070,7 @@ function render() {
   const total = P.steps.length - 1;
   document.getElementById("bar").style.width = Math.round(100 * idx / total) + "%";
   document.getElementById("progress").textContent = s.type === "done" ? `Solved: ${S.solved} · In a row: ${S.streak}` : `Step ${idx + 1} of ${total}`;
-  const focusEl = document.getElementById("answerInput") || document.getElementById("gateBox") || document.querySelector(".dirs .choice:not(:disabled)") || document.getElementById("nextBtn");
+  const focusEl = (document.getElementById("answerInput") && document.getElementById("answerInput").value ? document.getElementById("answerInput2") : null) || document.getElementById("answerInput") || document.getElementById("gateBox") || document.querySelector(".dirs .choice:not(:disabled)") || document.getElementById("nextBtn");
   if (focusEl && !solOpen) focusEl.focus({ preventScroll: true });
   const target = s.type === "done" ? fin : document.getElementById("controls");
   if (!solOpen && target.getBoundingClientRect().bottom > window.innerHeight) target.scrollIntoView({ block: "end", behavior: "smooth" });
