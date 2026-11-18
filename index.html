@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unit Conversion Guide (US customary)</title>
+<style>
+  /* ===== Shared look from the Multiplication + Long Division guides ===== */
+  body { font-family: system-ui, -apple-system, sans-serif; max-width: 880px; margin: 0 auto; padding: 16px; background: #f8f9fa; color: #222; }
+  h1 { font-size: 1.4rem; text-align: center; margin-bottom: 0.5rem; }
+  .subtitle { text-align: center; color: #555; margin-bottom: 1.5rem; font-size: 0.95rem; }
+  button { font-size: 1.05rem; padding: 10px 20px; border: none; border-radius: 8px; background: #0066cc; color: white; cursor: pointer; min-height: 44px; font-family: inherit; }
+  button:disabled { background: #aaa; cursor: not-allowed; }
+  button.secondary { background: #555; }
+  button.secondary:disabled { background: #ccc; color: #f4f4f4; }
+  button.big { font-size: 1.3rem; padding: 14px 36px; }
+  button.link { background: none; color: #0066cc; padding: 6px 4px; font-size: 1rem; min-height: 0; }
+  button.link:disabled { color: #aaa; background: none; }
+  .hidden { display: none !important; }
+  .step-box { background: #fff3cd; border: 2px solid #ffc107; border-radius: 10px; padding: 18px 16px; margin: 14px 0; font-size: 1.15rem; line-height: 1.5; text-align: center; }
+  .step-box.gate { background: #e7f3ff; border: 3px solid #0066cc; }
+  .feedback { margin-top: 10px; font-weight: bold; min-height: 1.4em; font-size: 1.1rem; }
+  .feedback:empty { min-height: 0; margin: 0; }
+  .feedback.correct { color: #28a745; }
+  .feedback.coach { margin: 12px auto 0; max-width: 560px; background: #fff; border: 2px solid #f0ad4e; border-radius: 10px; padding: 12px 14px; font-size: 1.12rem; line-height: 1.5; text-align: left; font-weight: normal; color: #333; }
+  .controls { display: flex; gap: 10px; justify-content: center; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+  .final-answer { background: #d4edda; border: 2px solid #28a745; border-radius: 10px; padding: 16px; text-align: center; font-size: 1.3rem; font-weight: bold; margin-top: 14px; }
+
+  /* ===== Start screen ===== */
+  .settings { background: white; border: 2px solid #ddd; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .set-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 6px 0; justify-content: center; }
+  .set-label { font-weight: bold; font-size: 1.1rem; }
+  .seg { display: inline-flex; border: 2px solid #0066cc; border-radius: 10px; overflow: hidden; flex-wrap: wrap; }
+  .seg button { background: white; color: #0066cc; border-radius: 0; padding: 10px 18px; border-right: 1px solid #cfe2f7; }
+  .seg button:last-child { border-right: none; }
+  .seg button.on { background: #0066cc; color: white; font-weight: bold; }
+  .seg button small { display: block; font-size: 0.8rem; font-weight: normal; }
+  .level-example { text-align: center; color: #555; margin-top: 10px; font-size: 1rem; }
+  .level-example b { font-size: 1.25rem; color: #222; white-space: nowrap; }
+  .start-wrap { text-align: center; margin: 18px 0; }
+  .own { background: white; border: 2px solid #ddd; border-radius: 10px; padding: 14px 16px; margin-top: 8px; text-align: center; }
+  .own-title { font-weight: bold; font-size: 1.1rem; margin-bottom: 8px; }
+  .own-row { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
+  .own-row input { font-size: 1.3rem; padding: 8px 12px; width: 320px; max-width: 70vw; border: 2px solid #ccc; border-radius: 8px; font-family: inherit; }
+  .own-row input:focus { outline: none; border-color: #0066cc; }
+  .own-help { color: #777; font-size: 0.85rem; margin-top: 8px; }
+  #ownMsg { color: #a35a00; font-weight: bold; }
+  .gemdas-key { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; margin: 4px 0 14px; font-size: 0.9rem; color: #555; }
+  .gemdas-key span b { color: #0066cc; }
+
+  /* ===== Main screen ===== */
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .ptitle { font-size: 1.2rem; font-weight: bold; text-align: center; }
+  .stats { font-size: 0.95rem; color: #555; white-space: nowrap; min-width: 70px; text-align: right; }
+  .stats b { color: #222; }
+  .gemdas { display: flex; justify-content: center; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+  .gemdas span:not(.pair) { display: inline-flex; flex-direction: column; align-items: center; min-width: 44px; padding: 3px 6px; border-radius: 8px; color: #999; font-size: 0.7rem; line-height: 1.1; }
+  .gemdas span b { font-size: 1.15rem; }
+  .gemdas span.on { background: #0066cc; color: white; }
+  .gemdas i { color: #ccc; font-style: normal; align-self: center; font-size: 0.8rem; }
+  .gemdas .pair { display: inline-flex; flex-direction: row; gap: 0; border: 1px dashed #cfd6dd; border-radius: 10px; }
+  .gemdas span.half { background: #e7f3ff; color: #0066cc; }
+
+  /* the paper: every line the kid writes */
+  .paper { background: white; border: 2px solid #ddd; border-radius: 10px; padding: 10px 14px; margin: 10px 0 0;
+           overflow-x: auto; }
+  .paper-label { font-size: 0.8rem; color: #888; text-align: left; }
+  .line { text-align: center; font-size: 1.25rem; color: #8a939b; line-height: 34px; white-space: nowrap; border-bottom: 1px solid #dbe8f5; }
+  .line.cur { font-size: 2.1rem; color: #222; font-weight: bold; line-height: 1.7; padding: 4px 0; border-bottom: none; }
+  .expr sup { font-size: 0.6em; vertical-align: 0.9em; line-height: 0; }
+  .expr .gs { font-weight: bold; color: #333; }
+  .line:not(.cur) .gs { color: #8a939b; }
+  .frac { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 3px; line-height: 1.05; font-size: 0.75em; }
+  .frac .fbar { border-top: 2px solid currentColor; width: 100%; margin: 2px 0; }
+  .x-scope { background: #fff3cd; box-shadow: 0 0 0 3px #ffc107; border-radius: 8px; }
+  .x-target { background: #e7f3ff; box-shadow: 0 0 0 3px #0066cc; border-radius: 8px; color: #0066cc; padding: 0 4px; animation: tpulse 1.1s ease-in-out infinite; }
+  .x-fresh { background: #e6f6ea; box-shadow: 0 0 0 3px #28a745; border-radius: 8px; color: #1e7e34; padding: 0 6px; display: inline-block; animation: pop 0.5s ease-out; }
+  .x-mark { text-decoration: underline wavy #0066cc; text-underline-offset: 6px; color: #5b7fa6; }
+  @keyframes tpulse { 0%,100% { box-shadow: 0 0 0 3px #0066cc; } 50% { box-shadow: 0 0 0 5px rgba(0,102,204,.35); } }
+  @keyframes pop { from { transform: scale(1.5); opacity: 0; } to { transform: none; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .x-target, .x-fresh { animation: none; } }
+
+  .ask { font-size: 1.4rem; margin: 0 0 8px; }
+  .ask b { color: #0066cc; font-size: 1.5rem; white-space: nowrap; }
+  .choices { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 8px; }
+  .choice { background: white; color: #0066cc; border: 2px solid #0066cc; font-size: 1.15rem; padding: 10px 16px; min-width: 150px; display: inline-flex; align-items: center; gap: 10px; justify-content: center; }
+  .choice .sym { font-weight: bold; font-size: 1.4rem; min-width: 1.6em; }
+  .choice:hover:not(:disabled) { background: #f2f8ff; }
+  .choice.wrong, .choice.wrong:disabled { background: #fff4e5; color: #a35a00; border-color: #f0ad4e; cursor: default; }
+  .choice.right { background: #28a745; color: white; border-color: #28a745; }
+  .input-area { margin-top: 10px; display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; }
+  .work { font-size: 1.9rem; font-weight: bold; white-space: nowrap; }
+  .input-area input { font-size: 1.8rem; width: 130px; padding: 6px 10px; border: 2px solid #ccc; border-radius: 8px; text-align: center; font-family: inherit; font-weight: bold; }
+  .input-area input:focus { outline: none; border-color: #0066cc; }
+  button.check { font-size: 1.25rem; padding: 12px 28px; }
+  button.yn { font-size: 1.5rem; padding: 14px 40px; min-width: 130px; }
+  .tries { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+  .try { background: #fff4e5; border: 1px solid #f0ad4e; color: #a35a00; border-radius: 8px; padding: 0 8px; font-weight: bold; }
+  .hints { margin: 12px auto 0; max-width: 560px; text-align: left; display: flex; flex-direction: column; gap: 6px; }
+  .hintline { background: #fffdf3; border: 1px dashed #d4a017; border-radius: 8px; padding: 8px 12px; font-size: 1.05rem; }
+  .tag { display: inline-block; background: #856404; color: white; border-radius: 999px; font-size: 0.75rem; padding: 1px 8px; margin-right: 6px; vertical-align: 2px; text-transform: uppercase; letter-spacing: .03em; }
+  .gate-head { font-size: 1.45rem; font-weight: bold; color: #0066cc; }
+  .gate-text { font-size: 1.2rem; margin: 6px 0 4px; }
+  .gate-line { font-size: 2rem; font-weight: bold; background: white; border-radius: 10px; border: 2px dashed #9cc3ea; display: inline-block; padding: 4px 18px; margin: 6px 0; white-space: nowrap; max-width: 100%; overflow-x: auto; box-sizing: border-box; }
+  .gate-note { color: #555; font-size: 1rem; }
+  .gate-check { display: flex; align-items: center; justify-content: center; gap: 12px; max-width: 340px; margin: 12px auto 0; padding: 12px 14px; background: white; border: 2px solid #0066cc; border-radius: 10px; cursor: pointer; font-size: 1.25rem; font-weight: bold; color: #0066cc; user-select: none; }
+  .gate-check:hover { background: #f2f8ff; }
+  .gate-check input { width: 32px; height: 32px; accent-color: #28a745; cursor: pointer; flex: none; }
+  .did { color: #28a745; font-weight: bold; margin-bottom: 6px; font-size: 1.15rem; }
+  .mini-note { color: #777; font-size: 0.95rem; margin-top: 8px; }
+  .quick { background: white; border: 2px solid #ddd; border-radius: 10px; padding: 10px 14px; margin: 8px auto; max-width: 560px; font-size: 1.15rem; }
+  .yourans { font-size: 1.2rem; margin: 6px 0; }
+  .yourans b { font-size: 1.8rem; color: #0066cc; }
+  .reason-ok { display: inline-flex; align-items: center; gap: 10px; margin-top: 10px; color: #1e7e34; font-size: 1.1rem; font-weight: normal; }
+  .big-check { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: #28a745; color: white; font-size: 1.5rem; }
+  #hintBtn.auto { background: #ffc107; color: #3d2e00; font-weight: bold; }
+  #hintBtn.faded { background: white; color: #856404; border: 2px solid #e0c46c; }
+  .progress-wrap { margin: 10px auto 0; max-width: 420px; }
+  .bar { height: 10px; background: #e3e7eb; border-radius: 999px; overflow: hidden; }
+  .bar > div { height: 100%; background: #28a745; border-radius: 999px; transition: width .3s; }
+  .progress { text-align: center; color: #666; margin-top: 4px; font-size: 0.85rem; }
+  .solution { background: #f1f3f5; border: 2px solid #adb5bd; border-radius: 10px; padding: 14px 16px; margin-top: 14px; text-align: center; }
+  .solution h3 { margin: 0 0 6px; font-size: 1.2rem; }
+  .sol-row { display: flex; justify-content: center; align-items: baseline; gap: 12px; flex-wrap: wrap; padding: 4px 0; border-bottom: 1px solid #dee2e6; }
+  .sol-row .expr { font-size: 1.4rem; font-weight: bold; white-space: nowrap; }
+  .sol-row small { color: #555; font-size: 0.95rem; }
+  .sol-note { color: #555; margin: 10px 0 4px; }
+  .faded-note { color: #856404; font-size: 0.95rem; font-weight: normal; margin-top: 8px; }
+  @media (max-width: 520px) {
+    body { padding: 10px; }
+    .line.cur { font-size: 1.6rem; } .gate-line { font-size: 1.5rem; padding: 4px 8px; } .work { font-size: 1.5rem; }
+    .choice { min-width: 130px; font-size: 1.05rem; padding: 8px 10px; }
+    .gemdas span:not(.pair) { min-width: 30px; padding: 2px 2px; } .gemdas i { display: none; } .gemdas { gap: 6px; }
+    .ask { font-size: 1.2rem; } .stats { font-size: 0.85rem; min-width: 0; }
+    button.yn { padding: 12px 28px; min-width: 100px; }
+  }
+
+  /* ===== Unit conversion additions ===== */
+  .doors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 18px 0; }
+  .door { background: white; color: #222; border: 3px solid #0066cc; border-radius: 16px; padding: 22px 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; min-height: 190px; justify-content: center; }
+  .door:hover { background: #f2f8ff; }
+  .door .em { font-size: 3.2rem; line-height: 1; }
+  .door .dn { font-size: 1.5rem; font-weight: bold; color: #0066cc; }
+  .door small { color: #666; font-size: 0.85rem; line-height: 1.3; }
+  .pick-title { font-size: 1.2rem; font-weight: bold; margin: 16px 0 8px; text-align: center; }
+  .units { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .unit-btn { background: white; color: #0066cc; border: 2px solid #0066cc; font-size: 1.15rem; padding: 10px 18px; min-width: 120px; }
+  .unit-btn.on { background: #0066cc; color: white; font-weight: bold; }
+  .unit-btn small { display: block; font-size: 0.75rem; opacity: .8; }
+  .mixed-card { background: white; border: 2px dashed #bbb; border-radius: 10px; padding: 12px; text-align: center; margin-top: 18px; color: #666; }
+  .mixed-card.open { border: 2px solid #28a745; color: #1e7e34; }
+  .layout > * { min-width: 0; }
+  .layout { display: grid; grid-template-columns: 200px 1fr; gap: 16px; margin-top: 10px; align-items: start; }
+  .ladder { background: white; border: 2px solid #ddd; border-radius: 10px; padding: 10px; font-size: 0.95rem; }
+  .ladder-title { font-weight: bold; font-size: 0.9rem; color: #555; margin-bottom: 6px; text-align: center; }
+  .lad { display: flex; flex-direction: column; align-items: stretch; }
+  .lu { border: 2px solid #cfd6dd; border-radius: 8px; padding: 4px 8px; text-align: center; font-weight: bold; background: #f8f9fa; position: relative; }
+  .lu small { font-weight: normal; color: #666; }
+  .lu.from { background: #fff3cd; border-color: #ffc107; }
+  .lu.to { background: #e7f3ff; border-color: #0066cc; color: #0066cc; }
+  .lu .tagu { position: absolute; left: -6px; top: -9px; font-size: 0.65rem; background: #555; color: white; border-radius: 6px; padding: 0 5px; font-weight: normal; }
+  .lu.from .tagu { background: #a37b00; } .lu.to .tagu { background: #0066cc; }
+  .rung { text-align: center; color: #555; font-size: 0.85rem; padding: 3px 0; }
+  .rung .s { display: none; }
+  .lad-extra { margin-top: 8px; border-top: 1px dashed #ccc; padding-top: 6px; text-align: center; font-size: 0.85rem; color: #555; }
+  .ladder.go .rung.path { color: #0066cc; font-weight: bold; }
+  .qcard { background: white; border: 2px solid #ddd; border-radius: 10px; padding: 14px; text-align: center; }
+  .question { font-size: 1.6rem; font-weight: bold; line-height: 1.3; }
+  .dirbadge { display: inline-block; margin-top: 8px; padding: 4px 14px; border-radius: 999px; font-weight: bold; font-size: 1.05rem; }
+  .dirbadge.down { background: #e6f6ea; color: #1e7e34; } .dirbadge.up { background: #f3e8ff; color: #6f42c1; } .dirbadge.same { background: #eef1f4; color: #555; }
+  .dirbadge.unknown { background: #eef1f4; color: #888; font-weight: normal; }
+  .dirs { display: flex; flex-direction: column; gap: 10px; align-items: center; margin-top: 8px; }
+  .dirs .choice { min-width: 330px; justify-content: flex-start; }
+  .unitlabel { font-size: 1.3rem; font-weight: bold; color: #555; }
+  .sub { color: #555; font-size: 1.05rem; margin-bottom: 4px; }
+  .unlock { color: #1e7e34; font-size: 1.05rem; margin-top: 8px; }
+  .final-answer .controls button { margin: 0 4px; }
+  @media (max-width: 640px) {
+    .doors { grid-template-columns: 1fr; gap: 10px; } .door { min-height: 0; flex-direction: row; padding: 14px; gap: 14px; justify-content: flex-start; text-align: left; } .door .em { font-size: 2.4rem; }
+    .layout { grid-template-columns: 1fr; gap: 8px; }
+    .ladder { padding: 6px; } .ladder-title { display: none; }
+    .lad { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px; }
+    .lu { padding: 2px 6px; font-size: 0.85rem; } .lu small { display: none; } .lu .tagu { display: none; }
+    .rung { font-size: 0.75rem; padding: 0 2px; } .rung .l { display: none; } .rung .s { display: inline; }
+    .lad-extra { margin-top: 4px; padding-top: 3px; font-size: 0.75rem; }
+    .question { font-size: 1.3rem; } .gate-line { white-space: normal; font-size: 1.35rem; } .work { font-size: 1.4rem; } .input-area input { width: 110px; }
+    .dirs .choice { min-width: 0; width: 100%; }
+    .unit-btn { min-width: 0; padding: 8px 12px; font-size: 1rem; }
+  }
+</style>
+
+</head>
+<body>
+
+<!-- ================= START: three doors ================= -->
+<section id="startScreen">
+  <h1>Unit Conversion Guide</h1>
+  <p class="subtitle">✏️ Get your pencil and paper ready. Pick what you're measuring.</p>
+  <div class="doors">
+    <button class="door" data-fam="capacity" onclick="openFamily('capacity')"><span class="em">🥛</span><span><span class="dn">Capacity</span><br><small>fluid ounces, cups, pints,<br>quarts, gallons</small></span></button>
+    <button class="door" data-fam="weight" onclick="openFamily('weight')"><span class="em">⚖️</span><span><span class="dn">Weight</span><br><small>ounces, pounds, tons</small></span></button>
+    <button class="door" data-fam="length" onclick="openFamily('length')"><span class="em">📏</span><span><span class="dn">Length</span><br><small>inches, feet, yards, miles</small></span></button>
+  </div>
+</section>
+
+<!-- ================= PICK UNITS ================= -->
+<section id="pickScreen" class="hidden">
+  <div class="topbar">
+    <button class="link" onclick="showStart()">← Menu</button>
+    <div class="ptitle" id="pickTitle"></div>
+    <span class="stats"></span>
+  </div>
+  <div class="pick-title">1. Start with…</div>
+  <div class="units" id="fromUnits"></div>
+  <div id="toWrap" class="hidden">
+    <div class="pick-title">2. Change to…</div>
+    <div class="units" id="toUnits"></div>
+  </div>
+  <div class="start-wrap"><button class="big" id="goBtn" onclick="startSingle()" disabled>Start ▶</button></div>
+  <div id="mixedCard" class="mixed-card"></div>
+</section>
+
+<!-- ================= MAIN ================= -->
+<section id="mainScreen" class="hidden">
+  <div class="topbar">
+    <button class="link" id="unitsBtn" onclick="showPick()">← Units</button>
+    <div class="ptitle" id="ptitle"></div>
+    <div class="stats" id="stats"></div>
+  </div>
+  <div class="layout">
+    <aside class="ladder" id="ladder" aria-label="Reference table"></aside>
+    <div>
+      <div class="qcard" id="qcard"></div>
+      <div id="step" class="step-box" aria-live="polite"></div>
+      <div id="final" class="final-answer hidden"></div>
+      <div id="solution" class="solution hidden"></div>
+      <div class="controls" id="controls">
+        <button id="backBtn" class="secondary" onclick="goBack()">← Back</button>
+        <button id="hintBtn" onclick="tapHint()">💡 Hint</button>
+        <button id="solBtn" class="link" onclick="showSolution()">Show me the whole solution</button>
+      </div>
+      <div class="progress-wrap"><div class="bar"><div id="bar"></div></div><div id="progress" class="progress"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PURE LOGIC (tested by test.js; no DOM in here) ============ -->
+<script id="logic">
+/* ===================== UNITS (US customary) ===================== */
+// size = how many of the family's smallest unit make one of this unit. Ladder goes smallest → biggest.
+const FAMILIES = {
+  capacity: { name: "Capacity", emoji: "🥛", units: [
+    { id: "floz", one: "fluid ounce", many: "fluid ounces", short: "fl oz", size: 1 },
+    { id: "cup", one: "cup", many: "cups", short: "c", size: 8 },
+    { id: "pint", one: "pint", many: "pints", short: "pt", size: 16 },
+    { id: "quart", one: "quart", many: "quarts", short: "qt", size: 32 },
+    { id: "gallon", one: "gallon", many: "gallons", short: "gal", size: 128 }],
+    extra: [["gallon", "floz"]] },
+  weight: { name: "Weight", emoji: "⚖️", units: [
+    { id: "oz", one: "ounce", many: "ounces", short: "oz", size: 1 },
+    { id: "lb", one: "pound", many: "pounds", short: "lb", size: 16 },
+    { id: "ton", one: "ton", many: "tons", short: "T", size: 32000 }],
+    extra: [] },
+  length: { name: "Length", emoji: "📏", units: [
+    { id: "in", one: "inch", many: "inches", short: "in", size: 1 },
+    { id: "ft", one: "foot", many: "feet", short: "ft", size: 12 },
+    { id: "yd", one: "yard", many: "yards", short: "yd", size: 36 },
+    { id: "mi", one: "mile", many: "miles", short: "mi", size: 63360 }],
+    extra: [["mi", "ft"]] }
+};
+const unitOf = (fam, id) => FAMILIES[fam].units.find(u => u.id === id);
+const rankOf = (fam, id) => FAMILIES[fam].units.findIndex(u => u.id === id);
+const fmt = n => String(n).length > 3 ? String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",") : String(n);
+const name = (u, n) => (n === 1 ? u.one : u.many);
+const NUMWORD = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
+const cap = s => s[0].toUpperCase() + s.slice(1);
+// how many `small` units in one `big` unit
+function factor(fam, big, small) { return unitOf(fam, big).size / unitOf(fam, small).size; }
+// the rungs between two units (big → small), e.g. gallon→quart (4), quart→pint (2)…
+function rungs(fam, big, small) {
+  const us = FAMILIES[fam].units, hi = rankOf(fam, big), lo = rankOf(fam, small), out = [];
+  for (let i = hi; i > lo; i--) out.push({ from: us[i], to: us[i - 1], f: us[i].size / us[i - 1].size });
+  return out;
+}
+function rungsText(rs) { return rs.map(r => `1 ${r.from.short} = ${fmt(r.f)} ${r.to.short}`).join(", "); }
+function parseWhole(raw) {
+  let s = String(raw == null ? "" : raw).trim().replace(/\s+/g, "");
+  if (/^\d{1,3}(,\d{3})+$/.test(s)) s = s.replace(/,/g, "");
+  return /^\d+$/.test(s) ? parseInt(s, 10) : null;
+}
+
+/* ===================== ONE PROBLEM = A LIST OF STEPS ===================== */
+// spec: { fam, kind: "down"|"up"|"half"|"same"|"mixed", from, to, n, parts:[{n,unit},{n,unit}] }
+function buildProblem(spec) {
+  const { fam } = spec, F = FAMILIES[fam];
+  const steps = [];
+  const T = unitOf(fam, spec.to);
+  let question, line, answer, given;
+  if (spec.kind === "mixed") {
+    const [p1, p2] = spec.parts, U1 = unitOf(fam, p1.unit), U2 = unitOf(fam, p2.unit);
+    given = `${fmt(p1.n)} ${name(U1, p1.n)} ${fmt(p2.n)} ${name(U2, p2.n)}`;
+    question = `How many ${T.many} are in ${given}?`;
+    steps.push({ type: "dir", answer: "down", from: p1.unit, to: spec.to });
+    const f1 = factor(fam, p1.unit, spec.to), v1 = p1.n * f1;
+    steps.push({ type: "factor", big: p1.unit, small: spec.to, value: f1 });
+    steps.push({ type: "calc", op: "×", a: p1.n, b: f1, value: v1, big: p1.unit, small: spec.to, part: 1 });
+    let v2 = p2.n, f2 = 1;
+    if (p2.unit !== spec.to) {
+      f2 = factor(fam, p2.unit, spec.to); v2 = p2.n * f2;
+      steps.push({ type: "factor", big: p2.unit, small: spec.to, value: f2 });
+      steps.push({ type: "calc", op: "×", a: p2.n, b: f2, value: v2, big: p2.unit, small: spec.to, part: 2 });
+    }
+    answer = v1 + v2;
+    steps.push({ type: "calc", op: "+", a: v1, b: v2, value: answer, small: spec.to });
+    line = `${given} = ${fmt(p1.n)} × ${fmt(f1)} + ${f2 === 1 ? fmt(p2.n) : fmt(p2.n) + " × " + fmt(f2)} = ${fmt(v1)} + ${fmt(v2)} = ${fmt(answer)} ${name(T, answer)}`;
+  } else {
+    const S = unitOf(fam, spec.from);
+    if (spec.kind === "half") {
+      given = `half a ${S.one}`;
+      const f = factor(fam, spec.from, spec.to); answer = f / 2;
+      question = `How many ${T.many} are in half a ${S.one}?`;
+      steps.push({ type: "dir", answer: "down", from: spec.from, to: spec.to });
+      steps.push({ type: "factor", big: spec.from, small: spec.to, value: f });
+      steps.push({ type: "calc", op: "half", a: f, b: 2, value: answer, big: spec.from, small: spec.to });
+      line = `½ ${S.one} = ${fmt(f)} ÷ 2 = ${fmt(answer)} ${name(T, answer)}`;
+    } else if (spec.kind === "same") {
+      given = `${fmt(spec.n)} ${name(S, spec.n)}`; answer = spec.n;
+      question = `How many ${T.many} are in ${given}?`;
+      steps.push({ type: "dir", answer: "same", from: spec.from, to: spec.to });
+      steps.push({ type: "calc", op: "same", a: spec.n, b: 1, value: answer, small: spec.to });
+      line = `${given} = ${fmt(answer)} ${name(T, answer)}`;
+    } else if (spec.kind === "down") {
+      const f = factor(fam, spec.from, spec.to); answer = spec.n * f;
+      given = `${fmt(spec.n)} ${name(S, spec.n)}`;
+      question = `How many ${T.many} are in ${given}?`;
+      steps.push({ type: "dir", answer: "down", from: spec.from, to: spec.to });
+      steps.push({ type: "factor", big: spec.from, small: spec.to, value: f });
+      steps.push({ type: "calc", op: "×", a: spec.n, b: f, value: answer, big: spec.from, small: spec.to });
+      line = `${given} = ${fmt(spec.n)} × ${fmt(f)} = ${fmt(answer)} ${name(T, answer)}`;
+    } else { // up
+      const f = factor(fam, spec.to, spec.from); answer = spec.n / f;
+      given = `${fmt(spec.n)} ${name(S, spec.n)}`;
+      question = `How many ${T.many} are in ${given}?`;
+      steps.push({ type: "dir", answer: "up", from: spec.from, to: spec.to });
+      steps.push({ type: "factor", big: spec.to, small: spec.from, value: f, up: true });
+      steps.push({ type: "calc", op: "÷", a: spec.n, b: f, value: answer, big: spec.to, small: spec.from });
+      line = `${given} = ${fmt(spec.n)} ÷ ${fmt(f)} = ${fmt(answer)} ${name(T, answer)}`;
+    }
+  }
+  steps.push({ type: "gate" });
+  steps.push({ type: "done" });
+  steps.forEach(s => { s.fam = fam; });
+  return { spec, fam, question, line, answer, given, steps };
+}
+
+/* ---------- checking ---------- */
+const DIRNAME = { down: "⬇ Down to a smaller unit: multiply", up: "⬆ Up to a bigger unit: divide", same: "= Same unit: no change" };
+function checkDir(s, pick) {
+  if (pick === s.answer) return { ok: true };
+  const F = unitOf(s.fam, s.from), T = unitOf(s.fam, s.to);
+  if (s.answer === "same") return { ok: false, msg: `You're changing ${F.many} to ${T.many}. That's the <b>same unit</b>, so the number doesn't change.` };
+  if (pick === "same") return { ok: false, msg: `${cap(F.many)} and ${T.many} are different units. Find them both on the ladder.` };
+  if (s.answer === "down") return { ok: false, msg: `Look at the ladder: ${T.many} are <b>lower</b> (smaller) than ${F.many}. Each ${F.one} holds lots of ${T.many}, so you'll end up with <b>more</b> ${T.many}. More of a smaller unit → <b>multiply</b>.` };
+  return { ok: false, msg: `Look at the ladder: ${T.many} are <b>higher</b> (bigger) than ${F.many}. It takes lots of ${F.many} to make one ${T.one}, so you'll end up with <b>fewer</b> ${T.many}. Fewer of a bigger unit → <b>divide</b>.` };
+}
+function checkNumber(s, raw) {
+  if (String(raw == null ? "" : raw).trim() === "") return { ok: false, empty: true, msg: "Type your answer in the box first." };
+  const v = parseWhole(raw);
+  if (v === null) return { ok: false, msg: "Type a whole number, like 24 or 1,000." };
+  if (v === s.value) return { ok: true };
+  let msg = "Not quite. Try again!";
+  if (s.type === "factor") {
+    const rs = rungs(s.fam, s.big, s.small); let acc = 1;
+    for (let i = 0; i < rs.length - 1; i++) { acc *= rs[i].f; if (v === acc) { msg = `That's how many ${rs[i].to.many} are in 1 ${rs[0].from.one}. Keep going down the ladder to ${unitOf(s.fam, s.small).many}.`; break; } }
+    if (rs.length === 1 && v !== s.value) msg = `Check the ladder: find 1 ${unitOf(s.fam, s.big).one} = ? ${unitOf(s.fam, s.small).many}.`;
+  } else if (s.op === "×" && v === s.a + s.b) msg = "That's what you get when you add. This one is multiplication.";
+  else if (s.op === "×" && s.b !== 0 && v * s.b === s.a) msg = "Careful: going down the ladder, you get <b>more</b> units. Multiply.";
+  else if (s.op === "÷" && v === s.a * s.b) msg = "Careful: going up the ladder, you get <b>fewer</b> units. Divide.";
+  else if (s.op === "half" && v === s.a * 2) msg = "Half means cut it in half: <b>divide by 2</b>.";
+  return { ok: false, msg };
+}
+
+/* ---------- hints: one fact + point at the operation ---------- */
+const H = (tag, text) => ({ tag, text });
+function factFor(fam, big, small) { // "One gallon is 128 fluid ounces."
+  const B = unitOf(fam, big), S = unitOf(fam, small), f = factor(fam, big, small);
+  return `One ${B.one} is ${fmt(f)} ${name(S, f)}.`;
+}
+function hintsFor(s) {
+  const fam = s.fam;
+  if (s.type === "dir") {
+    const F = unitOf(fam, s.from), T = unitOf(fam, s.to);
+    if (s.answer === "same") return [H("rule", `${cap(F.many)} to ${T.many}: it's the same unit! Nothing needs to change.`)];
+    const where = rankOf(fam, s.to) < rankOf(fam, s.from) ? "below" : "above";
+    return [H("rule", "Going to a smaller unit? You'll need MORE of them, so multiply. Going to a bigger unit? You'll need FEWER, so divide."),
+            H("point", `On the ladder, ${T.many} are ${where} ${F.many}.`)];
+  }
+  if (s.type === "factor") {
+    const rs = rungs(fam, s.big, s.small), B = unitOf(fam, s.big), S = unitOf(fam, s.small);
+    const direct = FAMILIES[fam].extra.some(([a, b]) => a === s.big && b === s.small);
+    if (rs.length === 1) return [H("rule", `Look at the table: 1 ${B.short} = ${fmt(s.value)} ${S.short}.`), H("point", `Find ${B.many} on the ladder. The rung right under it tells how many ${S.many} are in one.`)];
+    if (direct) return [H("rule", `Look at the table: 1 ${B.short} = ${fmt(s.value)} ${S.short}.`), H("count rungs", `Or count the rungs down: ${rungsText(rs)}. Multiply: ${rs.map(r => fmt(r.f)).join(" × ")}.`)];
+    // a short cut through a fact on the table (1 mi = 5,280 ft)
+    const via = FAMILIES[fam].extra.find(([a, b]) => a === s.big && rankOf(fam, b) > rankOf(fam, s.small));
+    if (via) { const mid = unitOf(fam, via[1]), f1 = factor(fam, s.big, via[1]), f2 = factor(fam, via[1], s.small);
+      return [H("count rungs", `Start with a fact from the table: 1 ${B.short} = ${fmt(f1)} ${mid.short}. Then go down to ${S.many}: 1 ${mid.short} = ${fmt(f2)} ${S.short}.`), H("decompose", `Multiply: ${fmt(f1)} × ${fmt(f2)}.`)]; }
+    const out = [H("count rungs", `Count the rungs from ${B.one} down to ${S.one}: ${rungsText(rs)}.`)];
+    out.push(H("decompose", `Multiply the rungs: ${rs.map(r => fmt(r.f)).join(" × ")}.`));
+    return out;
+  }
+  if (s.type !== "calc") return [];
+  if (s.op === "same") return [H("rule", `It's the same unit, so the number stays the same: ${fmt(s.a)}.`)];
+  if (s.op === "+") return [H("decompose", `Add the two parts, both in ${unitOf(fam, s.small).many} now: ${fmt(s.a)} + ${fmt(s.b)}.`)];
+  if (s.op === "half") {
+    const B = unitOf(fam, s.big), S = unitOf(fam, s.small), f = s.a;
+    const out = [H("halve", `${factFor(fam, s.big, s.small)} Half a ${B.one} means cut that in half.`)];
+    const th = Math.floor(f / 1000) * 1000, rest = f - th;
+    if (th && rest) out.push(H("decompose", `Half of ${fmt(f)}: half of ${fmt(th)} is ${fmt(th / 2)}, and half of ${rest} is ${rest / 2}.`));
+    else if (f >= 20 && f % 10 === 0 && f < 1000) out.push(H("decompose", `Half of ${f}: think half of ${f / 10} tens.`));
+    else out.push(H("halve", `What number plus itself makes ${fmt(f)}?`));
+    return out;
+  }
+  if (s.op === "×") {
+    const n = s.a, f = s.b, fact = factFor(fam, s.big, s.small), B = unitOf(fam, s.big);
+    const N = n <= 12 ? cap(NUMWORD[n]) : fmt(n);
+    let first;
+    if (n === 1) first = H("rule", `${fact} You have just one ${B.one}.`);
+    else if (n === 2) first = H("double", `${fact} ${N} ${B.many} is double that.`);
+    else if (n === 3) first = H("triple", `${fact} ${N} ${B.many} is triple that.`);
+    else if (n === 4) first = H("double", `${fact} ${N} ${B.many} is double, then double again.`);
+    else if (n === 10) first = H("scale", `${fact} Ten ${B.many} is 10 times that: put a zero on the end.`);
+    else if (n === 5) first = H("halve", `${fact} Five is half of ten: find 10 × ${fmt(f)}, then cut it in half.`);
+    else if (n < 10) first = H("decompose", `${fact} ${N} ${B.many} is 5 ${B.many} + ${n - 5} ${name(B, n - 5)}: 5 × ${fmt(f)} + ${n - 5} × ${fmt(f)}.`);
+    else first = H("decompose", `${fact} ${N} ${B.many} is 10 ${B.many} + ${n - 10} ${name(B, n - 10)}: 10 × ${fmt(f)} + ${n - 10} × ${fmt(f)}.`);
+    const out = [first];
+    if (f <= 16 && n <= 10 && n > 1) out.push(H("count rungs", `Count by ${f}s, ${n} times: ${[1, 2, 3].map(i => i * f).join(", ")}, …`));
+    else if (f >= 1000 && n > 1) { const th = Math.floor(f / 1000) * 1000, rest = f - th; out.push(H("decompose", rest ? `Split ${fmt(f)} into ${fmt(th)} + ${rest}: ${n} × ${fmt(th)} + ${n} × ${rest}.` : `${n} × ${fmt(f)} is like ${n} × ${f / 1000}, then thousands.`)); }
+    else if (f > 16 && n > 1) { const t = f - f % 10, o = f % 10; if (o) out.push(H("decompose", `Split ${fmt(f)} into ${t} + ${o}: ${n} × ${t} + ${n} × ${o}.`)); }
+    return out;
+  }
+  // ÷ going up
+  const a = s.a, f = s.b, m = s.value, B = unitOf(fam, s.big), S = unitOf(fam, s.small);
+  const out = [H("rule", `${factFor(fam, s.big, s.small)} How many groups of ${fmt(f)} are in ${fmt(a)}?`)];
+  if (f === 2) out.push(H("halve", `Every 2 ${S.many} make 1 ${B.one}. Cut ${fmt(a)} in half.`));
+  else if (f === 4) out.push(H("halve", `÷ 4 is half, then half again. Half of ${fmt(a)} is ${fmt(a / 2)}.`));
+  else if (f >= 1000 && f % 1000 === 0) out.push(H("scale", `${fmt(a)} ÷ ${fmt(f)} is like ${a / 1000} ÷ ${f / 1000} (count the thousands).`));
+  else if (m <= 12) out.push(H("count rungs", `Count by ${fmt(f)}s until you reach ${fmt(a)}: ${[1, 2, 3].filter(i => i <= Math.max(m, 2)).map(i => fmt(i * f)).join(", ")}${m > 3 ? ", …" : ""}`));
+  const rs = rungs(fam, s.big, s.small);
+  if (rs.length > 1) { const last = rs[rs.length - 1]; out.push(H("count rungs", `Or climb one rung at a time: ${fmt(a)} ${last.to.short} ÷ ${last.f} = ${fmt(a / last.f)} ${last.from.short}. Keep climbing up to ${B.many}.`)); }
+  return out;
+}
+
+/* ---------- whole worked solution ---------- */
+function solutionRows(p) {
+  const rows = [];
+  for (const s of p.steps) {
+    if (s.type === "dir") rows.push(s.answer === "same" ? `${cap(unitOf(p.fam, s.from).many)} to ${unitOf(p.fam, s.to).many}: same unit, no change.` : s.answer === "down" ? `Going down the ladder to a smaller unit (${unitOf(p.fam, s.to).many}): multiply.` : `Going up the ladder to a bigger unit (${unitOf(p.fam, s.to).many}): divide.`);
+    if (s.type === "factor") rows.push(`1 ${unitOf(p.fam, s.big).one} = ${fmt(s.value)} ${name(unitOf(p.fam, s.small), s.value)}`);
+    if (s.type === "calc") rows.push(s.op === "same" ? `${fmt(s.a)} stays ${fmt(s.value)}` : s.op === "half" ? `Half of ${fmt(s.a)} = ${fmt(s.value)}` : `${fmt(s.a)} ${s.op} ${fmt(s.b)} = ${fmt(s.value)}`);
+  }
+  rows.push(p.line);
+  return rows;
+}
+
+/* ===================== GENERATOR (whole numbers only) ===================== */
+function makeRng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+// friendly amounts of the BIG unit for a given factor (keeps answers fifth-grade sized)
+function amountRange(f) {
+  if (f <= 4) return [2, 12]; if (f <= 16) return [2, 10]; if (f <= 36) return [2, 9];
+  if (f <= 128) return [1, 5]; if (f <= 2000) return [1, 5]; if (f <= 5280) return [1, 3];
+  return [1, 1];
+}
+function generateSingle(fam, from, to, rng, avoidQ) {
+  rng = rng || Math.random;
+  const R = (lo, hi) => lo + Math.floor(rng() * (hi - lo + 1));
+  for (let t = 0; t < 50; t++) {
+    let spec;
+    if (from === to) spec = { fam, kind: "same", from, to, n: R(2, 15) };
+    else if (rankOf(fam, from) > rankOf(fam, to)) {
+      const f = factor(fam, from, to), [lo, hi] = amountRange(f);
+      if (f % 2 === 0 && rng() < (hi === 1 ? 0.5 : 0.2)) spec = { fam, kind: "half", from, to };
+      else spec = { fam, kind: "down", from, to, n: R(lo, hi) };
+    } else {
+      const f = factor(fam, to, from), [lo, hi] = amountRange(f);
+      spec = { fam, kind: "up", from, to, n: R(lo, hi) * f };
+    }
+    const p = buildProblem(spec);
+    if (p.question !== avoidQ || t > 40) return p;
+  }
+}
+// mixed units: always going DOWN to a smaller unit, so the answer is a whole number
+const MIXED = {
+  capacity: [["gallon", "quart", ["quart", "pint"]], ["quart", "pint", ["pint", "cup"]], ["pint", "cup", ["cup", "floz"]], ["cup", "floz", ["floz"]]],
+  weight: [["lb", "oz", ["oz"]], ["ton", "lb", ["lb"]]],
+  length: [["ft", "in", ["in"]], ["yd", "ft", ["ft", "in"]], ["mi", "ft", ["ft"]], ["mi", "yd", ["yd"]]]
+};
+function generateMixed(fam, rng, avoidQ) {
+  rng = rng || Math.random;
+  const R = (lo, hi) => lo + Math.floor(rng() * (hi - lo + 1)), pick = a => a[Math.floor(rng() * a.length)];
+  for (let t = 0; t < 50; t++) {
+    const [big, small, targets] = pick(MIXED[fam]);
+    const rung = factor(fam, big, small);
+    const n1 = rung >= 1000 ? R(1, 2) : R(2, 5);
+    const n2 = rung >= 1000 ? R(1, 9) * 100 : R(1, rung - 1);
+    const to = pick(targets);
+    const p = buildProblem({ fam, kind: "mixed", to, parts: [{ n: n1, unit: big }, { n: n2, unit: small }] });
+    if (p.answer > 12000) continue;
+    if (p.question !== avoidQ || t > 40) return p;
+  }
+}
+
+if (typeof module !== "undefined") module.exports = { FAMILIES, unitOf, rankOf, factor, rungs, fmt, parseWhole, buildProblem, checkDir, checkNumber, hintsFor, solutionRows, generateSingle, generateMixed, makeRng, MIXED, amountRange };
+</script>
+
+<!-- ======================= UI ======================= -->
+<script>
+const pickState = { capacity: {}, weight: {}, length: {} };
+// session only (nothing saved): momentum, scaffolding fade per family, mixed-units unlock per family
+const S = { solved: 0, streak: 0, clean: {}, auto: {}, run: {}, mixed: {} };
+const FADE_AFTER = 3, UNLOCK_AFTER = 5;
+let fam = null, P = null, idx = 0, mode = "single", tries = {}, coach = {}, picked = {}, hintsShown = {}, gateLock = false, rightPick = null;
+for (const f of Object.keys(FAMILIES)) { S.clean[f] = 0; S.auto[f] = true; S.run[f] = 0; S.mixed[f] = false; }
+
+function show(id) { ["startScreen", "pickScreen", "mainScreen"].forEach(x => document.getElementById(x).classList.toggle("hidden", x !== id)); window.scrollTo(0, 0); }
+function showStart() { show("startScreen"); }
+function openFamily(f) { fam = f; showPick(); }
+function showPick() {
+  show("pickScreen");
+  const F = FAMILIES[fam], ps = pickState[fam];
+  document.getElementById("pickTitle").textContent = `${F.emoji} ${F.name}`;
+  const big = [...F.units].reverse();
+  document.getElementById("fromUnits").innerHTML = big.map(u => `<button class="unit-btn ${ps.from === u.id ? "on" : ""}" data-u="${u.id}" onclick="pickFrom('${u.id}')">${cap(u.many)}<small>${u.short}</small></button>`).join("");
+  document.getElementById("toWrap").classList.toggle("hidden", !ps.from);
+  if (ps.from) document.getElementById("toUnits").innerHTML = big.map(u => `<button class="unit-btn ${ps.to === u.id ? "on" : ""}" data-u="${u.id}" onclick="pickTo('${u.id}')">${cap(u.many)}<small>${u.id === ps.from ? "same unit" : u.short}</small></button>`).join("");
+  document.getElementById("goBtn").disabled = !(ps.from && ps.to);
+  const mc = document.getElementById("mixedCard");
+  if (S.mixed[fam]) { mc.className = "mixed-card open"; mc.innerHTML = `🔓 <b>Mixed units unlocked!</b> Problems like “2 pints 1 cup”.<div class="start-wrap" style="margin:8px 0 0"><button id="mixedBtn" onclick="startMixed()">Mixed units ▶</button></div>`; }
+  else { mc.className = "mixed-card"; mc.innerHTML = `🔒 <b>Mixed units</b> (like 2 pints 1 cup): get ${UNLOCK_AFTER} right in a row in ${F.name.toLowerCase()} to unlock. <b id="runN">${Math.min(S.run[fam], UNLOCK_AFTER)}</b> / ${UNLOCK_AFTER}`; }
+}
+function pickFrom(u) { pickState[fam].from = u; pickState[fam].to = null; showPick(); const t = document.querySelector("#toUnits .unit-btn"); if (t) t.focus(); }
+function pickTo(u) { pickState[fam].to = u; showPick(); document.getElementById("goBtn").focus(); }
+function startSingle() { mode = "single"; const ps = pickState[fam]; if (!ps.from || !ps.to) return; load(generateSingle(fam, ps.from, ps.to)); }
+function startMixed() { if (!S.mixed[fam]) return; mode = "mixed"; load(generateMixed(fam)); }
+function nextProblem() {
+  const q = P && P.question;
+  if (mode === "mixed") load(generateMixed(fam, Math.random, q));
+  else { const ps = pickState[fam]; load(generateSingle(fam, ps.from, ps.to, Math.random, q)); }
+}
+function load(p) {
+  P = p; P.revealed = false; P.hintTaps = 0; P.wrongs = 0; P.finished = false; P.fadedNow = false; P.unlockedNow = false;
+  idx = 0; tries = {}; coach = {}; picked = {}; hintsShown = {}; gateLock = false; rightPick = null;
+  show("mainScreen");
+  document.getElementById("solution").classList.add("hidden");
+  const F = FAMILIES[fam];
+  document.getElementById("ptitle").textContent = mode === "mixed" ? `${F.emoji} ${F.name}: mixed units` : `${F.emoji} ${cap(unitOf(fam, p.spec.from).many)} → ${unitOf(fam, p.spec.to).many}`;
+  render();
+}
+
+/* ---------- FSM transitions ---------- */
+function advance() { if (idx >= P.steps.length - 1) return; idx++; rightPick = null; if (P.steps[idx].type === "done") finish(); render(); }
+function goBack() {
+  if (!P || idx === 0) return;
+  [idx, idx - 1].forEach(i => { delete coach[i]; delete tries[i]; delete picked[i]; });
+  idx--; gateLock = false; rightPick = null; render();
+}
+function finish() {
+  if (P.finished) return; P.finished = true;
+  if (P.revealed) { S.streak = 0; S.run[fam] = 0; return; }
+  S.solved++; S.streak++;
+  if (P.wrongs === 0) { S.run[fam]++; if (S.run[fam] >= UNLOCK_AFTER && !S.mixed[fam]) { S.mixed[fam] = true; P.unlockedNow = true; } } else S.run[fam] = 0;
+  if (P.hintTaps === 0 && P.wrongs === 0) { S.clean[fam]++; if (S.clean[fam] >= FADE_AFTER && S.auto[fam]) { S.auto[fam] = false; P.fadedNow = true; } }
+  else S.clean[fam] = 0;
+}
+function pickDir(d) {
+  const s = P.steps[idx]; if (s.type !== "dir" || rightPick) return;
+  const r = checkDir(s, d);
+  if (r.ok) { rightPick = d; delete coach[idx]; render(); setTimeout(() => { if (rightPick === d && P.steps[idx] === s) advance(); }, 500); return; }
+  (picked[idx] || (picked[idx] = [])).push(d); coach[idx] = r.msg; P.wrongs++; render();
+}
+function submitAnswer() {
+  const s = P.steps[idx]; if (s.type !== "factor" && s.type !== "calc") return;
+  const el = document.getElementById("answerInput"), raw = el.value;
+  const r = checkNumber(s, raw);
+  if (r.ok) { delete coach[idx]; advance(); return; }
+  coach[idx] = r.msg;
+  if (!r.empty && parseWhole(raw) !== null) {
+    (tries[idx] || (tries[idx] = [])).push(raw.trim()); P.wrongs++;
+    if (S.auto[fam] && (hintsShown[idx] || 0) < hintsFor(s).length) hintsShown[idx] = (hintsShown[idx] || 0) + 1;
+  }
+  render();
+  const e2 = document.getElementById("answerInput"); if (e2) { e2.value = ""; e2.focus(); }
+}
+function tapHint() {
+  const s = P.steps[idx], hs = hintsFor(s);
+  if (!hs.length || (hintsShown[idx] || 0) >= hs.length) return;
+  hintsShown[idx] = (hintsShown[idx] || 0) + 1; P.hintTaps++; S.clean[fam] = 0; S.auto[fam] = true; render();
+}
+function gateTapped(cb) { if (!cb.checked || gateLock) return; gateLock = true; setTimeout(() => { gateLock = false; advance(); }, 300); }
+function showSolution() {
+  if (!P) return;
+  P.revealed = true; S.streak = 0; S.clean[fam] = 0; S.run[fam] = 0;
+  const rows = solutionRows(P);
+  const el = document.getElementById("solution");
+  el.innerHTML = `<h3>The whole solution</h3>${rows.map((r, i) => `<div class="sol-row"><span class="${i === rows.length - 1 ? "expr" : ""}" style="${i === rows.length - 1 ? "font-size:1.3rem;font-weight:bold" : ""}">${r}</span></div>`).join("")}
+    <div class="sol-note">Seeing the solution is OK when you're stuck. This one won't count as solved. Next time, try a 💡 hint first!</div>
+    <div class="controls"><button class="secondary" id="solClose" onclick="hideSolution()">Keep working on this one</button><button id="solNext" onclick="nextProblem()">Next problem →</button></div>`;
+  el.classList.remove("hidden"); render();
+  el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+function hideSolution() { document.getElementById("solution").classList.add("hidden"); render(); }
+
+/* ---------- rendering ---------- */
+function curDir() { const d = P.steps[0]; return idx > 0 ? d.answer : rightPick; }
+function renderLadder() {
+  const F = FAMILIES[fam], us = [...F.units].reverse(), s0 = P.steps[0];
+  const dir = curDir();
+  const lo = Math.min(rankOf(fam, s0.from), rankOf(fam, s0.to)), hi = Math.max(rankOf(fam, s0.from), rankOf(fam, s0.to));
+  const fromIds = P.spec.kind === "mixed" ? P.spec.parts.map(p => p.unit) : [s0.from];
+  let h = `<div class="ladder-title">📋 ${F.name} ladder</div><div class="lad">`;
+  us.forEach((u, i) => {
+    const isFrom = fromIds.includes(u.id), isTo = u.id === P.spec.to;
+    const cls = isTo && dir ? "to" : isFrom ? "from" : isTo ? "to" : "";
+    h += `<div class="lu ${cls}" data-u="${u.id}">${isFrom && isTo ? `<span class="tagu">same</span>` : isFrom ? `<span class="tagu">from</span>` : isTo ? `<span class="tagu">to</span>` : ""}${u.many} <small>(${u.short})</small></div>`;
+    const nx = us[i + 1];
+    if (nx) {
+      const r = rankOf(fam, u.id), on = dir && dir !== "same" && r <= hi && r - 1 >= lo;
+      const arrow = on ? (dir === "down" ? "⬇" : "⬆") : "↕";
+      h += `<div class="rung ${on ? "path" : ""}"><span class="l">${arrow} 1 ${u.short} = ${fmt(u.size / nx.size)} ${nx.short}</span><span class="s">${on ? arrow : ""}${fmt(u.size / nx.size)}</span></div>`;
+    }
+  });
+  h += `</div>`;
+  if (F.extra.length) h += `<div class="lad-extra">${F.extra.map(([a, b]) => `1 ${unitOf(fam, a).short} = ${fmt(factor(fam, a, b))} ${unitOf(fam, b).short}`).join("<br>")}</div>`;
+  const el = document.getElementById("ladder"); el.innerHTML = h; el.classList.toggle("go", !!dir);
+}
+function render() {
+  const s = P.steps[idx];
+  renderLadder();
+  const dir = curDir();
+  document.getElementById("qcard").innerHTML = `<div class="question" id="question">${P.question}</div>` +
+    (dir ? `<div class="dirbadge ${dir}" id="dirBadge">${dir === "down" ? "⬇ Down the ladder to a smaller unit → multiply ×" : dir === "up" ? "⬆ Up the ladder to a bigger unit → divide ÷" : "= Same unit → no change"}</div>` : `<div class="dirbadge unknown" id="dirBadge">Which way on the ladder? ⬆ or ⬇</div>`);
+  const box = document.getElementById("step");
+  let html = "";
+  const hs = hintsFor(s), shown = hintsShown[idx] || 0;
+  const hintBlock = shown ? `<div class="hints">${hs.slice(0, shown).map(h => `<div class="hintline"><span class="tag">${h.tag}</span>${h.text}</div>`).join("")}</div>` : "";
+  const coachBlock = coach[idx] ? `<div id="feedback" class="feedback coach">${coach[idx]}</div>` : `<div id="feedback" class="feedback"></div>`;
+  const input = (label, unit) => `<input id="answerInput" inputmode="numeric" autocomplete="off" aria-label="${label}" onkeydown="if(event.key==='Enter') submitAnswer()">${unit ? `<span class="unitlabel">${unit}</span>` : ""}<button class="check" onclick="submitAnswer()">Check</button>`;
+  const triesBlock = (tries[idx] || []).length ? `<div class="tries">${tries[idx].map(v => `<span class="try">${v.replace(/</g, "&lt;")} ✗</span>`).join("")}</div>` : "";
+  if (s.type === "dir") {
+    const F = unitOf(fam, s.from), T = unitOf(fam, s.to), wrong = new Set(picked[idx] || []);
+    html += `<div class="ask">Which way on the ladder?</div><div class="sub">From <b>${P.spec.kind === "mixed" ? "bigger units" : F.many}</b> to <b>${T.many}</b></div>`;
+    html += `<div class="dirs">${["down", "up", "same"].map(d => `<button class="choice ${wrong.has(d) ? "wrong" : ""} ${rightPick === d ? "right" : ""}" data-dir="${d}" ${wrong.has(d) ? "disabled" : ""} onclick="pickDir('${d}')"><span class="sym">${wrong.has(d) ? "✗" : rightPick === d ? "✓" : { down: "⬇", up: "⬆", same: "=" }[d]}</span>${DIRNAME[d].slice(2)}</button>`).join("")}</div>`;
+    html += coachBlock + hintBlock;
+  } else if (s.type === "factor") {
+    const B = unitOf(fam, s.big), Sm = unitOf(fam, s.small);
+    html += s.up ? `<div class="ask">How many <b>${Sm.many}</b> make <b>1 ${B.one}</b>?</div>` : `<div class="ask">How many <b>${Sm.many}</b> are in <b>1 ${B.one}</b>?</div>`;
+    html += `<div class="sub">Use the ladder.</div><div class="input-area"><span class="work">1 ${B.short} =</span>${input(`${Sm.many} in 1 ${B.one}`, Sm.short)}</div>`;
+    html += triesBlock + coachBlock + hintBlock;
+  } else if (s.type === "calc") {
+    const Sm = unitOf(fam, s.small);
+    let ask, work;
+    if (s.op === "×") { ask = P.spec.kind === "mixed" ? `Change the ${fmt(s.a)} ${name(unitOf(fam, s.big), s.a)} to ${Sm.many}: multiply` : "Now multiply"; work = `${fmt(s.a)} × ${fmt(s.b)} =`; }
+    else if (s.op === "÷") { ask = "Now divide"; work = `${fmt(s.a)} ÷ ${fmt(s.b)} =`; }
+    else if (s.op === "half") { ask = "Now take half"; work = `${fmt(s.a)} ÷ 2 =`; }
+    else if (s.op === "same") { ask = "Same unit: what's the number?"; work = `${P.given} =`; }
+    else { ask = `Add the parts (both in ${Sm.many} now)`; work = `${fmt(s.a)} + ${fmt(s.b)} =`; }
+    html += `<div class="ask">${ask}</div><div class="input-area"><span class="work">${work}</span>${input("Your answer", s.op === "×" || s.op === "+" || s.op === "half" || s.op === "same" ? Sm.short : unitOf(fam, s.big).short)}</div>`;
+    html += triesBlock + coachBlock + hintBlock;
+  } else if (s.type === "gate") {
+    html += `<div class="did">✓ Correct! ${P.given} = ${fmt(P.answer)} ${name(unitOf(fam, P.spec.to), P.answer)}</div>`;
+    html += `<div class="gate-head">✏️ Write it on your paper</div><div class="gate-text">Write this on your paper:</div><div class="gate-line" id="gateLine">${P.line}</div>`;
+    html += `<label class="gate-check"><input type="checkbox" id="gateBox" onchange="gateTapped(this)" onkeydown="if(event.key==='Enter'){this.checked=true;gateTapped(this)}"> I wrote it</label>`;
+  }
+  box.innerHTML = html;
+  box.classList.toggle("hidden", s.type === "done");
+  box.classList.toggle("gate", s.type === "gate");
+
+  const fin = document.getElementById("final");
+  if (s.type === "done") {
+    fin.classList.remove("hidden");
+    const head = P.revealed ? "Finished! This one doesn't count because you saw the solution. Try the next one on your own 💪" : "🎉 You did it! Does your paper match?";
+    fin.innerHTML = `<div style="font-size:1rem;font-weight:normal;margin-bottom:6px">${head}</div><div style="font-size:1.5rem">${P.given} = ${fmt(P.answer)} ${name(unitOf(fam, P.spec.to), P.answer)}</div>`
+      + (P.unlockedNow ? `<div class="unlock">🔓 You got ${UNLOCK_AFTER} in a row! <b>Mixed units</b> are unlocked for ${FAMILIES[fam].name.toLowerCase()}.</div>` : "")
+      + (P.fadedNow ? `<div class="faded-note">You're on a roll! Hints will stay out of the way now. Tap 💡 Hint any time you want one.</div>` : "")
+      + `<div class="controls" style="margin-top:14px"><button id="nextBtn" class="big" onclick="nextProblem()">Next problem →</button>${P.unlockedNow ? `<button id="tryMixedBtn" class="big" style="background:#28a745" onclick="startMixed()">Try mixed units</button>` : ""}</div>`
+      + `<div><button class="link" id="changeBtn" onclick="showPick()">Change units</button></div>`;
+  } else fin.classList.add("hidden");
+
+  document.getElementById("backBtn").disabled = idx === 0;
+  const hb = document.getElementById("hintBtn"), hintable = ["dir", "factor", "calc"].includes(s.type);
+  hb.className = (hintable ? "" : "hidden ") + (S.auto[fam] ? "auto" : "faded");
+  hb.disabled = !hs.length || shown >= hs.length;
+  hb.textContent = !hs.length || shown < hs.length ? (shown ? `💡 Another hint (${shown}/${hs.length})` : "💡 Hint") : "💡 No more hints";
+  const solOpen = !document.getElementById("solution").classList.contains("hidden");
+  document.getElementById("solBtn").classList.toggle("hidden", s.type === "done" || solOpen);
+  document.getElementById("stats").innerHTML = `<span title="Problems solved">⭐ <b id="solvedN">${S.solved}</b></span> &nbsp;<span title="In a row">🔥 <b id="streakN">${S.streak}</b></span>`;
+  const total = P.steps.length - 1;
+  document.getElementById("bar").style.width = Math.round(100 * idx / total) + "%";
+  document.getElementById("progress").textContent = s.type === "done" ? `Solved: ${S.solved} · In a row: ${S.streak}` : `Step ${idx + 1} of ${total}`;
+  const focusEl = document.getElementById("answerInput") || document.getElementById("gateBox") || document.querySelector(".dirs .choice:not(:disabled)") || document.getElementById("nextBtn");
+  if (focusEl && !solOpen) focusEl.focus({ preventScroll: true });
+  const target = s.type === "done" ? fin : document.getElementById("controls");
+  if (!solOpen && target.getBoundingClientRect().bottom > window.innerHeight) target.scrollIntoView({ block: "end", behavior: "smooth" });
+}
+</script>
+</body>
+</html>
