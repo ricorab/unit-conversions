@@ -136,7 +136,7 @@
   }
 
   /* ===== Unit conversion additions ===== */
-  .doors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 18px 0; }
+  .doors { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 18px 0; }
   .door { background: white; color: #222; border: 3px solid #0066cc; border-radius: 16px; padding: 22px 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; min-height: 190px; justify-content: center; }
   .door:hover { background: #f2f8ff; }
   .door .em { font-size: 3.2rem; line-height: 1; }
@@ -174,6 +174,13 @@
   .rung { text-align: center; color: #555; font-size: 0.85rem; padding: 3px 0; }
   .rung .s { display: none; }
   .lad-extra { margin-top: 8px; border-top: 1px dashed #ccc; padding-top: 6px; text-align: center; font-size: 0.85rem; color: #555; }
+  .sheet-t { font-weight: bold; font-size: 0.8rem; color: #555; margin-bottom: 2px; }
+  .sheet-l { padding: 2px 4px; border-radius: 6px; line-height: 1.3; }
+  .ladder.go .sheet-l.hit { background: #e7f3ff; color: #0066cc; font-weight: bold; }
+  .lad-cal { margin-top: 8px; border-top: 1px dashed #ccc; padding-top: 6px; display: flex; flex-direction: column; gap: 6px; }
+  .cal-l { font-size: 0.8rem; color: #555; text-align: center; }
+  .to-note { color: #555; font-size: 0.9rem; margin-top: 6px; text-align: center; }
+  .unit-btn:disabled { opacity: 0.45; cursor: not-allowed; }
   .ladder.go .rung.path { color: #0066cc; font-weight: bold; }
   .qcard { background: white; border: 2px solid #ddd; border-radius: 10px; padding: 14px; text-align: center; }
   .question { font-size: 1.6rem; font-weight: bold; line-height: 1.3; }
@@ -186,6 +193,7 @@
   .sub { color: #555; font-size: 1.05rem; margin-bottom: 4px; }
   .unlock { color: #1e7e34; font-size: 1.05rem; margin-top: 8px; }
   .final-answer .controls button { margin: 0 4px; }
+  @media (max-width: 900px) and (min-width: 641px) { .doors { grid-template-columns: repeat(2, 1fr); } .door { min-height: 150px; } }
   @media (max-width: 640px) {
     .doors { grid-template-columns: 1fr; gap: 10px; } .door { min-height: 0; flex-direction: row; padding: 14px; gap: 14px; justify-content: flex-start; text-align: left; } .door .em { font-size: 2.4rem; }
     .layout { grid-template-columns: 1fr; gap: 8px; }
@@ -193,7 +201,8 @@
     .lad { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px; }
     .lu { padding: 2px 6px; font-size: 0.85rem; } .lu small { display: none; } .lu .tagu { display: none; }
     .rung { font-size: 0.75rem; padding: 0 2px; } .rung .l { display: none; } .rung .s { display: inline; }
-    .lad-extra { margin-top: 4px; padding-top: 3px; font-size: 0.75rem; }
+    .lad-extra { margin-top: 4px; padding-top: 3px; font-size: 0.75rem; } .sheet-t { display: none; } .sheet-l { padding: 0 4px; }
+    .lad-cal { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; margin-top: 4px; padding-top: 3px; } .cal-l { font-size: 0.75rem; }
     .question { font-size: 1.3rem; } .gate-line { white-space: normal; font-size: 1.35rem; } .work { font-size: 1.4rem; } .input-area input { width: 110px; }
     .dirs .choice { min-width: 0; width: 100%; }
     .unit-btn { min-width: 0; padding: 8px 12px; font-size: 1rem; }
@@ -204,14 +213,15 @@
 </head>
 <body>
 
-<!-- ================= START: three doors ================= -->
+<!-- ================= START: four doors ================= -->
 <section id="startScreen">
   <h1>Unit Conversion Guide</h1>
   <p class="subtitle">✏️ Get your pencil and paper ready. Pick what you're measuring.</p>
   <div class="doors">
-    <button class="door" data-fam="capacity" onclick="openFamily('capacity')"><span class="em">🥛</span><span><span class="dn">Capacity</span><br><small>fluid ounces, cups, pints,<br>quarts, gallons</small></span></button>
+    <button class="door" data-fam="capacity" onclick="openFamily('capacity')"><span class="em">🥛</span><span><span class="dn">Capacity</span><br><small>teaspoons, tablespoons, fluid ounces, cups, pints, quarts, gallons</small></span></button>
     <button class="door" data-fam="weight" onclick="openFamily('weight')"><span class="em">⚖️</span><span><span class="dn">Weight</span><br><small>ounces, pounds, tons</small></span></button>
     <button class="door" data-fam="length" onclick="openFamily('length')"><span class="em">📏</span><span><span class="dn">Length</span><br><small>inches, feet, yards, miles</small></span></button>
+    <button class="door" data-fam="time" onclick="openFamily('time')"><span class="em">⏰</span><span><span class="dn">Time</span><br><small>seconds, minutes, hours,<br>days, weeks, years</small></span></button>
   </div>
   <button class="own-door" id="ownDoor" onclick="showCustom(true)"><span class="em">✏️</span><span><span class="dn">My own problem</span><br><small>Type a problem from your worksheet or Freckle</small></span></button>
 </section>
@@ -255,6 +265,7 @@
   <div id="toWrap" class="hidden">
     <div class="pick-title">2. Change to…</div>
     <div class="units" id="toUnits"></div>
+    <div class="to-note" id="toNote"></div>
   </div>
   <div class="start-wrap"><button class="big" id="goBtn" onclick="startSingle()" disabled>Start ▶</button></div>
   <div id="mixedCard" class="mixed-card"></div>
@@ -289,35 +300,83 @@
 /* ===================== UNITS (US customary) ===================== */
 // size = how many of the family's smallest unit make one of this unit. Ladder goes smallest → biggest.
 const FAMILIES = {
-  capacity: { name: "Capacity", emoji: "🥛", units: [
-    { id: "floz", one: "fluid ounce", many: "fluid ounces", short: "fl oz", size: 1 },
-    { id: "cup", one: "cup", many: "cups", short: "c", size: 8 },
-    { id: "pint", one: "pint", many: "pints", short: "pt", size: 16 },
-    { id: "quart", one: "quart", many: "quarts", short: "qt", size: 32 },
-    { id: "gallon", one: "gallon", many: "gallons", short: "gal", size: 128 }],
-    extra: [["gallon", "floz"]] },
-  weight: { name: "Weight", emoji: "⚖️", units: [
+  capacity: { name: "Capacity", emoji: "🥛", mixEx: "2 pints 1 cup", units: [
+    { id: "tsp", one: "teaspoon", many: "teaspoons", short: "tsp", size: 1 },
+    { id: "tbsp", one: "tablespoon", many: "tablespoons", short: "Tbsp", size: 3 },
+    { id: "floz", one: "fluid ounce", many: "fluid ounces", short: "fl oz", size: 6 },
+    { id: "cup", one: "cup", many: "cups", short: "c", size: 48 },
+    { id: "pint", one: "pint", many: "pints", short: "pt", size: 96 },
+    { id: "quart", one: "quart", many: "quarts", short: "qt", size: 192 },
+    { id: "gallon", one: "gallon", many: "gallons", short: "gal", size: 768 }],
+    // Thomas's US Customary reference sheet, word for word
+    sheet: [["1 Tbsp = 3 tsp", "tbsp", [["tsp", 3]]],
+            ["1 fl oz = 2 Tbsp = 6 tsp", "floz", [["tbsp", 2], ["tsp", 6]]],
+            ["1 c = 8 fl oz = 16 Tbsp = 48 tsp", "cup", [["floz", 8], ["tbsp", 16], ["tsp", 48]]],
+            ["1 pt = 2 c = 16 fl oz", "pint", [["cup", 2], ["floz", 16]]],
+            ["1 qt = 2 pt = 4 c = 32 fl oz", "quart", [["pint", 2], ["cup", 4], ["floz", 32]]],
+            ["1 gal = 4 qt = 8 pt = 16 c = 128 fl oz = 256 Tbsp = 768 tsp", "gallon", [["quart", 4], ["pint", 8], ["cup", 16], ["floz", 128], ["tbsp", 256], ["tsp", 768]]]] },
+  weight: { name: "Weight", emoji: "⚖️", mixEx: "2 pounds 5 ounces", units: [
     { id: "oz", one: "ounce", many: "ounces", short: "oz", size: 1 },
     { id: "lb", one: "pound", many: "pounds", short: "lb", size: 16 },
     { id: "ton", one: "ton", many: "tons", short: "T", size: 32000 }],
-    extra: [] },
-  length: { name: "Length", emoji: "📏", units: [
+    sheet: [["1 lb. = 16 oz", "lb", [["oz", 16]]],
+            ["1 T = 2,000 lb = 32,000 oz", "ton", [["lb", 2000], ["oz", 32000]]]] },
+  length: { name: "Length", emoji: "📏", mixEx: "2 feet 5 inches", units: [
     { id: "in", one: "inch", many: "inches", short: "in", size: 1 },
     { id: "ft", one: "foot", many: "feet", short: "ft", size: 12 },
     { id: "yd", one: "yard", many: "yards", short: "yd", size: 36 },
     { id: "mi", one: "mile", many: "miles", short: "mi", size: 63360 }],
-    extra: [["mi", "ft"]] }
+    sheet: [["1 ft = 12 in", "ft", [["in", 12]]],
+            ["1 yd = 3 ft = 36 in", "yd", [["ft", 3], ["in", 36]]],
+            ["1 mi = 1,760 yd = 5,280 ft = 63,360 in", "mi", [["yd", 1760], ["ft", 5280], ["in", 63360]]]] },
+  // Time: the ladder is sec → min → hr → day → week. Months and years sit off the ladder (cal: true):
+  // a month isn't a set number of days or weeks, and 52 weeks (364 days) isn't quite 365 days,
+  // so years only change to months (× 12), weeks (× 52) and days (× 365), straight from the sheet.
+  time: { name: "Time", emoji: "⏰", mixEx: "2 hours 15 minutes", units: [
+    { id: "sec", one: "second", many: "seconds", short: "sec", size: 1 },
+    { id: "min", one: "minute", many: "minutes", short: "min", size: 60 },
+    { id: "hr", one: "hour", many: "hours", short: "hr", size: 3600, an: true },
+    { id: "day", one: "day", many: "days", short: "day", size: 86400 },
+    { id: "week", one: "week", many: "weeks", short: "wk", size: 604800 },
+    { id: "month", one: "month", many: "months", short: "mo", cal: true },
+    { id: "year", one: "year", many: "years", short: "yr", cal: true }],
+    sheet: [["1 minute (min) = 60 seconds", "min", [["sec", 60]]],
+            ["1 hour (hr) = 60 minutes", "hr", [["min", 60]]],
+            ["1 day = 24 hours", "day", [["hr", 24]]],
+            ["1 week = 7 days", "week", [["day", 7]]],
+            ["1 year = 12 months = 52 weeks = 365 days (366 in a leap year)", "year", [["month", 12], ["week", 52], ["day", 365]]]] }
 };
+// table facts (big, small) straight from the sheet; shortcuts the hints can point at
+for (const F of Object.values(FAMILIES)) F.extra = F.sheet.flatMap(([, big, facts]) => facts.map(([small]) => [big, small]));
 const unitOf = (fam, id) => FAMILIES[fam].units.find(u => u.id === id);
 const rankOf = (fam, id) => FAMILIES[fam].units.findIndex(u => u.id === id);
+const ladderUnits = fam => FAMILIES[fam].units.filter(u => !u.cal);
+const isCal = (fam, id) => !!(unitOf(fam, id) || {}).cal;
+const aOne = u => (u.an ? "an " : "a ") + u.one;   // "an hour"
+function sheetFact(fam, big, small) { for (const [, b, facts] of FAMILIES[fam].sheet) if (b === big) for (const [sm, f] of facts) if (sm === small) return f; return null; }
+// can these two units be changed into each other? (months only ↔ years; years only ↔ months, weeks, days)
+function canConvert(fam, a, b) {
+  if (a === b) return true;
+  if (!isCal(fam, a) && !isCal(fam, b)) return true;
+  const big = rankOf(fam, a) > rankOf(fam, b) ? a : b, small = big === a ? b : a;
+  return sheetFact(fam, big, small) !== null;
+}
 const fmt = n => String(n).length > 3 ? String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",") : String(n);
 const name = (u, n) => (n === 1 ? u.one : u.many);
 const NUMWORD = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
 const cap = s => s[0].toUpperCase() + s.slice(1);
 // how many `small` units in one `big` unit
-function factor(fam, big, small) { return unitOf(fam, big).size / unitOf(fam, small).size; }
+// practice problems: only pairs that convert exactly, and not the giant ones (1 day = 86,400 seconds)
+const PRACTICE_MAX = 63360;
+function practiceOK(fam, a, b) { if (!canConvert(fam, a, b)) return false; const [bg, sm] = rankOf(fam, a) >= rankOf(fam, b) ? [a, b] : [b, a]; return factor(fam, bg, sm) <= PRACTICE_MAX; }
+function factor(fam, big, small) {
+  if (big === small) return 1;
+  if (isCal(fam, big) || isCal(fam, small)) { const f = sheetFact(fam, big, small); if (f === null) throw new Error(`no fact ${big}→${small}`); return f; }
+  return unitOf(fam, big).size / unitOf(fam, small).size;
+}
 // the rungs between two units (big → small), e.g. gallon→quart (4), quart→pint (2)…
 function rungs(fam, big, small) {
+  if (isCal(fam, big) || isCal(fam, small)) return [{ from: unitOf(fam, big), to: unitOf(fam, small), f: factor(fam, big, small) }];
   const us = FAMILIES[fam].units, hi = rankOf(fam, big), lo = rankOf(fam, small), out = [];
   for (let i = hi; i > lo; i--) out.push({ from: us[i], to: us[i - 1], f: us[i].size / us[i - 1].size });
   return out;
@@ -356,13 +415,23 @@ function buildProblem(spec) {
   } else {
     const S = unitOf(fam, spec.from);
     if (spec.kind === "half") {
-      given = `half a ${S.one}`;
+      given = `half ${aOne(S)}`;
       const f = factor(fam, spec.from, spec.to); answer = f / 2;
-      question = `How many ${T.many} are in half a ${S.one}?`;
+      question = `How many ${T.many} are in half ${aOne(S)}?`;
       steps.push({ type: "dir", answer: "down", from: spec.from, to: spec.to });
       steps.push({ type: "factor", big: spec.from, small: spec.to, value: f });
       steps.push({ type: "calc", op: "half", a: f, b: 2, value: answer, big: spec.from, small: spec.to });
       line = `½ ${S.one} = ${fmt(f)} ÷ 2 = ${fmt(answer)} ${name(T, answer)}`;
+    } else if (spec.kind === "halfplus") {
+      const f = factor(fam, spec.from, spec.to), v1 = spec.n * f, h = f / 2; answer = v1 + h;
+      given = `${fmt(spec.n)} ½ ${S.many}`;
+      question = `How many ${T.many} are in ${given}?`;
+      steps.push({ type: "dir", answer: "down", from: spec.from, to: spec.to });
+      steps.push({ type: "factor", big: spec.from, small: spec.to, value: f });
+      steps.push({ type: "calc", op: "×", a: spec.n, b: f, value: v1, big: spec.from, small: spec.to, part: 1 });
+      steps.push({ type: "calc", op: "half", a: f, b: 2, value: h, big: spec.from, small: spec.to, part: 2 });
+      steps.push({ type: "calc", op: "+", a: v1, b: h, value: answer, small: spec.to });
+      line = `${given} = ${fmt(spec.n)} × ${fmt(f)} + ${fmt(f)} ÷ 2 = ${fmt(v1)} + ${fmt(h)} = ${fmt(answer)} ${name(T, answer)}`;
     } else if (spec.kind === "same") {
       given = `${fmt(spec.n)} ${name(S, spec.n)}`; answer = spec.n;
       question = `How many ${T.many} are in ${given}?`;
@@ -400,8 +469,9 @@ function checkDir(s, pick) {
   const F = unitOf(s.fam, s.from), T = unitOf(s.fam, s.to);
   if (s.answer === "same") return { ok: false, msg: `You're changing ${F.many} to ${T.many}. That's the <b>same unit</b>, so the number doesn't change.` };
   if (pick === "same") return { ok: false, msg: `${cap(F.many)} and ${T.many} are different units. Find them both on the ladder.` };
-  if (s.answer === "down") return { ok: false, msg: `Look at the ladder: ${T.many} are <b>lower</b> (smaller) than ${F.many}. Each ${F.one} holds lots of ${T.many}, so you'll end up with <b>more</b> ${T.many}. More of a smaller unit → <b>multiply</b>.` };
-  return { ok: false, msg: `Look at the ladder: ${T.many} are <b>higher</b> (bigger) than ${F.many}. It takes lots of ${F.many} to make one ${T.one}, so you'll end up with <b>fewer</b> ${T.many}. Fewer of a bigger unit → <b>divide</b>.` };
+  const look = isCal(s.fam, s.from) || isCal(s.fam, s.to) ? "Look at the table" : "Look at the ladder";
+  if (s.answer === "down") return { ok: false, msg: `${look}: ${T.many} are <b>lower</b> (smaller) than ${F.many}. Each ${F.one} holds lots of ${T.many}, so you'll end up with <b>more</b> ${T.many}. More of a smaller unit → <b>multiply</b>.` };
+  return { ok: false, msg: `${look}: ${T.many} are <b>higher</b> (bigger) than ${F.many}. It takes lots of ${F.many} to make one ${T.one}, so you'll end up with <b>fewer</b> ${T.many}. Fewer of a bigger unit → <b>divide</b>.` };
 }
 function checkNumber(s, raw) {
   if (String(raw == null ? "" : raw).trim() === "") return { ok: false, empty: true, msg: "Type your answer in the box first." };
@@ -433,15 +503,16 @@ function hintsFor(s) {
     if (s.answer === "same") return [H("rule", `${cap(F.many)} to ${T.many}: it's the same unit! Nothing needs to change.`)];
     const where = rankOf(fam, s.to) < rankOf(fam, s.from) ? "below" : "above";
     return [H("rule", "Going to a smaller unit? You'll need MORE of them, so multiply. Going to a bigger unit? You'll need FEWER, so divide."),
-            H("point", `On the ladder, ${T.many} are ${where} ${F.many}.`)];
+            isCal(fam, s.from) || isCal(fam, s.to) ? H("point", `A ${rankOf(fam, s.to) < rankOf(fam, s.from) ? F.one : T.one} is longer than a ${rankOf(fam, s.to) < rankOf(fam, s.from) ? T.one : F.one}. Check the table: 1 year = 12 months = 52 weeks = 365 days.`) : H("point", `On the ladder, ${T.many} are ${where} ${F.many}.`)];
   }
   if (s.type === "factor") {
     const rs = rungs(fam, s.big, s.small), B = unitOf(fam, s.big), S = unitOf(fam, s.small);
     const direct = FAMILIES[fam].extra.some(([a, b]) => a === s.big && b === s.small);
+    if (isCal(fam, s.big) || isCal(fam, s.small)) return [H("rule", `Look at the table: 1 ${B.one} = ${fmt(s.value)} ${name(S, s.value)}.`), H("point", `Find the line that starts with 1 year. ${cap(B.many)} aren't on the ladder: a month isn't always the same number of days.`)];
     if (rs.length === 1) return [H("rule", `Look at the table: 1 ${B.short} = ${fmt(s.value)} ${S.short}.`), H("point", `Find ${B.many} on the ladder. The rung right under it tells how many ${S.many} are in one.`)];
     if (direct) return [H("rule", `Look at the table: 1 ${B.short} = ${fmt(s.value)} ${S.short}.`), H("count rungs", `Or count the rungs down: ${rungsText(rs)}. Multiply: ${rs.map(r => fmt(r.f)).join(" × ")}.`)];
     // a short cut through a fact on the table (1 mi = 5,280 ft)
-    const via = FAMILIES[fam].extra.find(([a, b]) => a === s.big && rankOf(fam, b) > rankOf(fam, s.small));
+    const via = FAMILIES[fam].extra.filter(([a, b]) => a === s.big && rankOf(fam, b) > rankOf(fam, s.small) && sheetFact(fam, b, s.small) !== null).sort((x, y) => rankOf(fam, x[1]) - rankOf(fam, y[1]))[0];
     if (via) { const mid = unitOf(fam, via[1]), f1 = factor(fam, s.big, via[1]), f2 = factor(fam, via[1], s.small);
       return [H("count rungs", `Start with a fact from the table: 1 ${B.short} = ${fmt(f1)} ${mid.short}. Then go down to ${S.many}: 1 ${mid.short} = ${fmt(f2)} ${S.short}.`), H("decompose", `Multiply: ${fmt(f1)} × ${fmt(f2)}.`)]; }
     const out = [H("count rungs", `Count the rungs from ${B.one} down to ${S.one}: ${rungsText(rs)}.`)];
@@ -453,7 +524,7 @@ function hintsFor(s) {
   if (s.op === "+") return [H("decompose", `Add the two parts, both in ${unitOf(fam, s.small).many} now: ${fmt(s.a)} + ${fmt(s.b)}.`)];
   if (s.op === "half") {
     const B = unitOf(fam, s.big), S = unitOf(fam, s.small), f = s.a;
-    const out = [H("halve", `${factFor(fam, s.big, s.small)} Half a ${B.one} means cut that in half.`)];
+    const out = [H("halve", `${factFor(fam, s.big, s.small)} Half ${aOne(B)} means cut that in half.`)];
     const th = Math.floor(f / 1000) * 1000, rest = f - th;
     if (th && rest) out.push(H("decompose", `Half of ${fmt(f)}: half of ${fmt(th)} is ${fmt(th / 2)}, and half of ${rest} is ${rest / 2}.`));
     else if (f >= 20 && f % 10 === 0 && f < 1000) out.push(H("decompose", `Half of ${f}: think half of ${f / 10} tens.`));
@@ -475,6 +546,7 @@ function hintsFor(s) {
     const out = [first];
     if (f <= 16 && n <= 10 && n > 1) out.push(H("count rungs", `Count by ${f}s, ${n} times: ${[1, 2, 3].map(i => i * f).join(", ")}, …`));
     else if (f >= 1000 && n > 1) { const th = Math.floor(f / 1000) * 1000, rest = f - th; out.push(H("decompose", rest ? `Split ${fmt(f)} into ${fmt(th)} + ${rest}: ${n} × ${fmt(th)} + ${n} × ${rest}.` : `${n} × ${fmt(f)} is like ${n} × ${f / 1000}, then thousands.`)); }
+    else if (f > 16 && f % 10 === 0 && n > 1) out.push(H("scale", `${n} × ${fmt(f)}: do ${n} × ${fmt(f / 10)} = ${fmt(n * f / 10)}, then put a zero on the end.`));
     else if (f > 16 && n > 1) { const t = f - f % 10, o = f % 10; if (o) out.push(H("decompose", `Split ${fmt(f)} into ${t} + ${o}: ${n} × ${t} + ${n} × ${o}.`)); }
     return out;
   }
@@ -483,6 +555,7 @@ function hintsFor(s) {
   const out = [H("rule", `${factFor(fam, s.big, s.small)} How many groups of ${fmt(f)} are in ${fmt(a)}?`)];
   if (f === 2) out.push(H("halve", `Every 2 ${S.many} make 1 ${B.one}. Cut ${fmt(a)} in half.`));
   else if (f === 4) out.push(H("halve", `÷ 4 is half, then half again. Half of ${fmt(a)} is ${fmt(a / 2)}.`));
+  else if (f % 10 === 0 && a % 10 === 0 && f % 1000 !== 0) { let z = 0, ff = f, aa = a; while (ff % 10 === 0 && aa % 10 === 0) { ff /= 10; aa /= 10; z++; } out.push(H("scale", `Cross off ${z === 1 ? "a zero" : z + " zeros"} on both numbers: ${fmt(a)} ÷ ${fmt(f)} is the same as ${fmt(aa)} ÷ ${fmt(ff)}.`)); }
   else if (f >= 1000 && f % 1000 === 0) out.push(H("scale", `${fmt(a)} ÷ ${fmt(f)} is like ${a / 1000} ÷ ${f / 1000} (count the thousands).`));
   else if (m <= 12) out.push(H("count rungs", `Count by ${fmt(f)}s until you reach ${fmt(a)}: ${[1, 2, 3].filter(i => i <= Math.max(m, 2)).map(i => fmt(i * f)).join(", ")}${m > 3 ? ", …" : ""}`));
   const rs = rungs(fam, s.big, s.small);
@@ -507,7 +580,7 @@ function makeRng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5)
 // friendly amounts of the BIG unit for a given factor (keeps answers fifth-grade sized)
 function amountRange(f) {
   if (f <= 4) return [2, 12]; if (f <= 16) return [2, 10]; if (f <= 36) return [2, 9];
-  if (f <= 128) return [1, 5]; if (f <= 2000) return [1, 5]; if (f <= 5280) return [1, 3];
+  if (f <= 128) return [1, 5]; if (f <= 1000) return [1, 4]; if (f <= 2000) return [1, 5]; if (f <= 5280) return [1, 3];
   return [1, 1];
 }
 function generateSingle(fam, from, to, rng, avoidQ) {
@@ -519,6 +592,7 @@ function generateSingle(fam, from, to, rng, avoidQ) {
     else if (rankOf(fam, from) > rankOf(fam, to)) {
       const f = factor(fam, from, to), [lo, hi] = amountRange(f);
       if (f % 2 === 0 && rng() < (hi === 1 ? 0.5 : 0.2)) spec = { fam, kind: "half", from, to };
+      else if (fam === "time" && f % 2 === 0 && f <= 1440 && rng() < 0.2) spec = { fam, kind: "halfplus", from, to, n: R(1, Math.min(hi, 4)) };
       else spec = { fam, kind: "down", from, to, n: R(lo, hi) };
     } else {
       const f = factor(fam, to, from), [lo, hi] = amountRange(f);
@@ -530,9 +604,10 @@ function generateSingle(fam, from, to, rng, avoidQ) {
 }
 // mixed units: always going DOWN to a smaller unit, so the answer is a whole number
 const MIXED = {
-  capacity: [["gallon", "quart", ["quart", "pint"]], ["quart", "pint", ["pint", "cup"]], ["pint", "cup", ["cup", "floz"]], ["cup", "floz", ["floz"]]],
+  capacity: [["tbsp", "tsp", ["tsp"]], ["gallon", "quart", ["quart", "pint"]], ["quart", "pint", ["pint", "cup"]], ["pint", "cup", ["cup", "floz"]], ["cup", "floz", ["floz"]]],
   weight: [["lb", "oz", ["oz"]], ["ton", "lb", ["lb"]]],
-  length: [["ft", "in", ["in"]], ["yd", "ft", ["ft", "in"]], ["mi", "ft", ["ft"]], ["mi", "yd", ["yd"]]]
+  length: [["ft", "in", ["in"]], ["yd", "ft", ["ft", "in"]], ["mi", "ft", ["ft"]], ["mi", "yd", ["yd"]]],
+  time: [["hr", "min", ["min"]], ["min", "sec", ["sec"]], ["day", "hr", ["hr"]], ["week", "day", ["day"]], ["year", "month", ["month"]]]
 };
 function generateMixed(fam, rng, avoidQ) {
   rng = rng || Math.random;
@@ -589,12 +664,13 @@ function parseAmount(raw) {
 }
 // unit words (oz is decided later: weight unless it sits next to capacity units)
 const ALIAS = [
-  [/^(fl\.? ?oz\.?|fluid ?ounces?|floz)$/, "capacity:floz"], [/^(c|cups?)$/, "capacity:cup"], [/^(pt|pts|pints?)$/, "capacity:pint"], [/^(qt|qts|quarts?)$/, "capacity:quart"], [/^(gal|gals|gallons?)$/, "capacity:gallon"],
+  [/^(fl\.? ?oz\.?|fluid ?ounces?|floz)$/, "capacity:floz"], [/^(tsp|tsps|teaspoons?)$/, "capacity:tsp"], [/^(tbsp|tbsps|tbs|tablespoons?)$/, "capacity:tbsp"], [/^(c|cups?)$/, "capacity:cup"], [/^(pt|pts|pints?)$/, "capacity:pint"], [/^(qt|qts|quarts?)$/, "capacity:quart"], [/^(gal|gals|gallons?)$/, "capacity:gallon"],
   [/^(oz|ozs|ounces?)$/, "?:oz"], [/^(lb|lbs|pounds?)$/, "weight:lb"], [/^(t|tn|tons?)$/, "weight:ton"],
-  [/^(in|ins|inch|inches|")$/, "length:in"], [/^(ft|foot|feet|')$/, "length:ft"], [/^(yd|yds|yards?)$/, "length:yd"], [/^(mi|miles?)$/, "length:mi"]
+  [/^(in|ins|inch|inches|")$/, "length:in"], [/^(ft|foot|feet|')$/, "length:ft"], [/^(yd|yds|yards?)$/, "length:yd"], [/^(mi|miles?)$/, "length:mi"],
+  [/^(sec|secs|seconds?)$/, "time:sec"], [/^(min|mins|minutes?)$/, "time:min"], [/^(h|hr|hrs|hours?)$/, "time:hr"], [/^(days?)$/, "time:day"], [/^(wk|wks|weeks?)$/, "time:week"], [/^(mo|mos|months?)$/, "time:month"], [/^(yr|yrs|years?)$/, "time:year"]
 ];
 function lookupUnit(w) { w = w.toLowerCase().replace(/\.$/, ""); for (const [re, k] of ALIAS) if (re.test(w)) return k; return null; }
-const FAMWORD = { capacity: "capacity (how much something holds)", weight: "weight (how heavy)", length: "length (how long)" };
+const FAMWORD = { capacity: "capacity (how much something holds)", weight: "weight (how heavy)", length: "length (how long)", time: "time (how long something takes)" };
 class KidErr extends Error { constructor(m) { super(m); this.kid = true; } }
 function uName(key) { const [f, id] = key.split(":"); return unitOf(f, id); }
 
@@ -629,6 +705,10 @@ function buildCustom(input) {
   const to = toK.split(":")[1], to2 = to2K ? to2K.split(":")[1] : null;
   if (to2 && to2 === to) throw new KidErr("Pick two different units for the answer, like feet and inches, or leave the second one blank.");
   if (to2 && rankOf(fam, to2) > rankOf(fam, to)) throw new KidErr(`Put the bigger unit first: ${unitOf(fam, to2).many} and ${unitOf(fam, to).many}.`);
+  const calMsg = (a, b) => (a === "month" || b === "month")
+    ? "A month isn't always the same number of days (some have 30 or 31, February has 28 or 29). So months only change to years, and years to months."
+    : `Your reference sheet changes years only into months, weeks, or days. Change the years to days first, then the days to ${unitOf(fam, a === "year" ? b : a).many} as a new problem.`;
+  { const W0 = to2 || to; for (const p of P) if (!canConvert(fam, p.unit, W0)) throw new KidErr(calMsg(p.unit, W0)); if (to2 && !canConvert(fam, to, to2)) throw new KidErr(calMsg(to, to2)); }
   const dm = !!input.dm || got.some(g => g.dec);
   const sh = q => qshow(q, dm);
   const nm = (u, q) => (qnum(q) > 0 && qnum(q) <= 1 ? u.one : u.many);
@@ -710,7 +790,7 @@ function parseTyped(raw) {
   let m = s.match(/^how many (.+?) (?:are |is )?(?:in|make|equal|equals) (.+)$/);
   if (m) { right = m[1]; left = m[2]; }
   else {
-    m = s.match(/^(?:change |convert )?(.+?)\s*(?:=|→|->|\bto\b|\binto\b|\bequals\b|\bis how many\b|\bin\b(?= *_| *\?| *(?:fl|fluid|c|cups?|pt|pints?|qt|quarts?|gal|gallons?|oz|ounces?|lbs?|pounds?|t|tons?|in|inch|inches|ft|foot|feet|yd|yards?|mi|miles?)\b))\s*(.*)$/);
+    m = s.match(/^(?:change |convert )?(.+?)\s*(?:=|→|->|\bto\b|\binto\b|\bequals\b|\bis how many\b|\bin\b(?= *_| *\?| *(?:fl|fluid|c|cups?|pt|pints?|qt|quarts?|gal|gallons?|oz|ounces?|lbs?|pounds?|t|tons?|in|inch|inches|ft|foot|feet|yd|yards?|mi|miles?|tsp|teaspoons?|tbsp|tablespoons?|sec|seconds?|min|minutes?|hr|hrs|hours?|days?|wk|weeks?|mo|months?|yr|years?)\b))\s*(.*)$/);
     if (!m) throw new KidErr("I couldn't tell what to change it to. Try it like this: 3 gal = ___ qt.");
     left = m[1]; right = m[2];
   }
@@ -782,7 +862,7 @@ function hintsCustom(s) {
   if (s.op === "×") {
     if (intA && s.a.n <= 100000n) return hintsFor({ ...s, a: Number(s.a.n), b: f, value: Number(s.value.n) });
     const w = qfloor(s.a), fr = qsub(s.a, w), B = unitOf(fam, s.big);
-    const out = [H("decompose", `${factFor(fam, s.big, s.small)} ${sh(s.a)} ${B.many} is ${w.n > 0n ? `${sh(w)} ${w.n === 1n ? B.one : B.many} + ` : ""}${sh(fr)} of a ${B.one}: ${w.n > 0n ? `${sh(w)} × ${fmt(String(f))} + ` : ""}${sh(fr)} × ${fmt(String(f))}.`)];
+    const out = [H("decompose", `${factFor(fam, s.big, s.small)} ${sh(s.a)} ${B.many} is ${w.n > 0n ? `${sh(w)} ${w.n === 1n ? B.one : B.many} + ` : ""}${sh(fr)} of ${aOne(B)}: ${w.n > 0n ? `${sh(w)} × ${fmt(String(f))} + ` : ""}${sh(fr)} × ${fmt(String(f))}.`)];
     if (qeq(fr, Q(1, 2))) out.push(H("halve", `Half of ${fmt(String(f))} is ${fmt(String(f / 2))}.`));
     else out.push(H("rule", `To find ${sh(fr)} of ${fmt(String(f))}: divide ${fmt(String(f))} by ${fr.d}, then multiply by ${fr.n}.`));
     return out;
@@ -791,7 +871,7 @@ function hintsCustom(s) {
   if (intA && qint(s.value) && s.a.n <= 10000000n) return hintsFor({ ...s, a: Number(s.a.n), b: f, value: Number(s.value.n) });
   const B = unitOf(fam, s.big), S = unitOf(fam, s.small);
   return [H("rule", `${factFor(fam, s.big, s.small)} How many whole groups of ${fmt(String(f))} fit in ${sh(s.a)}?`),
-          H("decompose", `It doesn't come out even. The leftover ${S.many} are part of a ${B.one}: write the leftover on top and ${fmt(String(f))} on the bottom. Example: 2 R 1 is 2 and 1⁄${f}.`)];
+          H("decompose", `It doesn't come out even. The leftover ${S.many} are part of ${aOne(B)}: write the leftover on top and ${fmt(String(f))} on the bottom. Example: 2 R 1 is 2 and 1⁄${f}.`)];
 }
 function solutionRowsCustom(p) {
   const rows = [], sh = q => qshow(q, p.dm).h;
@@ -807,12 +887,12 @@ function solutionRowsCustom(p) {
 const UNIT_OPTIONS = Object.entries(FAMILIES).map(([f, F]) => ({ fam: f, label: F.name, units: [...F.units].reverse().map(u => ({ key: `${f}:${u.id}`, label: `${u.many} (${u.short})` })) }));
 
 if (typeof module !== "undefined") module.exports = { FAMILIES, unitOf, rankOf, factor, rungs, fmt, parseWhole, buildProblem, checkDir, checkNumber, hintsFor, solutionRows, generateSingle, generateMixed, makeRng, MIXED, amountRange,
-  Q, qeq, qshow, parseAmount, buildCustom, parseTyped, checkCustom, hintsCustom, solutionRowsCustom, lookupUnit, UNIT_OPTIONS };
+  Q, qeq, qshow, parseAmount, buildCustom, parseTyped, checkCustom, hintsCustom, solutionRowsCustom, lookupUnit, UNIT_OPTIONS, ladderUnits, isCal, canConvert, practiceOK, PRACTICE_MAX, sheetFact, aOne };
 </script>
 
 <!-- ======================= UI ======================= -->
 <script>
-const pickState = { capacity: {}, weight: {}, length: {} };
+const pickState = Object.fromEntries(Object.keys(FAMILIES).map(f => [f, {}]));
 // session only (nothing saved): momentum, scaffolding fade per family, mixed-units unlock per family
 const S = { solved: 0, streak: 0, clean: {}, auto: {}, run: {}, mixed: {} };
 const FADE_AFTER = 3, UNLOCK_AFTER = 5;
@@ -868,11 +948,20 @@ function showPick() {
   const big = [...F.units].reverse();
   document.getElementById("fromUnits").innerHTML = big.map(u => `<button class="unit-btn ${ps.from === u.id ? "on" : ""}" data-u="${u.id}" onclick="pickFrom('${u.id}')">${cap(u.many)}<small>${u.short}</small></button>`).join("");
   document.getElementById("toWrap").classList.toggle("hidden", !ps.from);
-  if (ps.from) document.getElementById("toUnits").innerHTML = big.map(u => `<button class="unit-btn ${ps.to === u.id ? "on" : ""}" data-u="${u.id}" onclick="pickTo('${u.id}')">${cap(u.many)}<small>${u.id === ps.from ? "same unit" : u.short}</small></button>`).join("");
+  if (ps.from) {
+    document.getElementById("toUnits").innerHTML = big.map(u => {
+      const okP = practiceOK(fam, ps.from, u.id), why = !canConvert(fam, ps.from, u.id) ? "not exact" : "too big";
+      return `<button class="unit-btn ${ps.to === u.id ? "on" : ""}" data-u="${u.id}" ${okP ? `onclick="pickTo('${u.id}')"` : `disabled title="${why}"`}>${cap(u.many)}<small>${!okP ? why : u.id === ps.from ? "same unit" : u.short}</small></button>`;
+    }).join("");
+    const notes = [];
+    if (big.some(u => !canConvert(fam, ps.from, u.id))) notes.push(ps.from === "month" ? "A month isn't always the same number of days (28, 29, 30 or 31), so months only change to years." : ps.from === "year" ? "Your sheet changes years into months, weeks, or days." : "Months aren't a set number of days or weeks, so they only go with years. Years go with weeks and days.");
+    if (big.some(u => canConvert(fam, ps.from, u.id) && !practiceOK(fam, ps.from, u.id))) notes.push("“Too big” ones (like 1 day = 86,400 seconds) work in ✏️ My own problem.");
+    document.getElementById("toNote").innerHTML = notes.join(" ");
+  }
   document.getElementById("goBtn").disabled = !(ps.from && ps.to);
   const mc = document.getElementById("mixedCard");
-  if (S.mixed[fam]) { mc.className = "mixed-card open"; mc.innerHTML = `🔓 <b>Mixed units unlocked!</b> Problems like “2 pints 1 cup”.<div class="start-wrap" style="margin:8px 0 0"><button id="mixedBtn" onclick="startMixed()">Mixed units ▶</button></div>`; }
-  else { mc.className = "mixed-card"; mc.innerHTML = `🔒 <b>Mixed units</b> (like 2 pints 1 cup): get ${UNLOCK_AFTER} right in a row in ${F.name.toLowerCase()} to unlock. <b id="runN">${Math.min(S.run[fam], UNLOCK_AFTER)}</b> / ${UNLOCK_AFTER}`; }
+  if (S.mixed[fam]) { mc.className = "mixed-card open"; mc.innerHTML = `🔓 <b>Mixed units unlocked!</b> Problems like “${F.mixEx}”.<div class="start-wrap" style="margin:8px 0 0"><button id="mixedBtn" onclick="startMixed()">Mixed units ▶</button></div>`; }
+  else { mc.className = "mixed-card"; mc.innerHTML = `🔒 <b>Mixed units</b> (like ${F.mixEx}): get ${UNLOCK_AFTER} right in a row in ${F.name.toLowerCase()} to unlock. <b id="runN">${Math.min(S.run[fam], UNLOCK_AFTER)}</b> / ${UNLOCK_AFTER}`; }
 }
 function pickFrom(u) { pickState[fam].from = u; pickState[fam].to = null; showPick(); const t = document.querySelector("#toUnits .unit-btn"); if (t) t.focus(); }
 function pickTo(u) { pickState[fam].to = u; showPick(); document.getElementById("goBtn").focus(); }
@@ -976,9 +1065,10 @@ function hideSolution() { document.getElementById("solution").classList.add("hid
 function activeDir() { for (let i = idx; i >= 0; i--) if (P.steps[i].type === "dir") return { s: P.steps[i], done: i < idx }; return { s: P.steps.find(x => x.type === "dir"), done: false }; }
 function curDir() { const a = activeDir(); return a.s ? (a.done ? a.s.answer : rightPick) : null; }
 function renderLadder() {
-  const F = FAMILIES[fam], us = [...F.units].reverse(), s0 = activeDir().s;
+  const F = FAMILIES[fam], us = [...ladderUnits(fam)].reverse(), s0 = activeDir().s;
+  const calPath = isCal(fam, s0.from) || isCal(fam, s0.to);
   const dir = curDir();
-  const lo = Math.min(rankOf(fam, s0.from), rankOf(fam, s0.to)), hi = Math.max(rankOf(fam, s0.from), rankOf(fam, s0.to));
+  const lo = calPath ? 99 : Math.min(rankOf(fam, s0.from), rankOf(fam, s0.to)), hi = Math.max(rankOf(fam, s0.from), rankOf(fam, s0.to));
   const fromIds = P.spec.parts ? P.spec.parts.map(p => p.unit) : [s0.from];
   let h = `<div class="ladder-title">📋 ${F.name} ladder</div><div class="lad">`;
   us.forEach((u, i) => {
@@ -989,11 +1079,16 @@ function renderLadder() {
     if (nx) {
       const r = rankOf(fam, u.id), on = dir && dir !== "same" && r <= hi && r - 1 >= lo;
       const arrow = on ? (dir === "down" ? "⬇" : "⬆") : "↕";
-      h += `<div class="rung ${on ? "path" : ""}"><span class="l">${arrow} 1 ${u.short} = ${fmt(u.size / nx.size)} ${nx.short}</span><span class="s">${on ? arrow : ""}${fmt(u.size / nx.size)}</span></div>`;
+      h += `<div class="rung ${on ? "path" : ""}"><span class="l">${arrow} 1 ${u.short} = ${fmt(u.size / nx.size)} ${nx.short === nx.one ? name(nx, u.size / nx.size) : nx.short}</span><span class="s">${on ? arrow : ""}${fmt(u.size / nx.size)}</span></div>`;
     }
   });
   h += `</div>`;
-  if (F.extra.length) h += `<div class="lad-extra">${F.extra.map(([a, b]) => `1 ${unitOf(fam, a).short} = ${fmt(factor(fam, a, b))} ${unitOf(fam, b).short}`).join("<br>")}</div>`;
+  const tagFor = u => { const isFrom = fromIds.includes(u.id), isTo = u.id === P.spec.to || u.id === P.spec.toBig; return [isFrom && isTo ? "from to" : isFrom ? "from" : isTo ? "to" : "", isFrom && isTo ? "same" : isFrom ? "from" : isTo ? "to" : ""]; };
+  const cal = F.units.filter(u => u.cal);
+  if (cal.length) h += `<div class="lad-cal"><span class="cal-l">📅 Off the ladder:</span>${[...cal].reverse().map(u => { const [c, t] = tagFor(u); return `<div class="lu ${c}" data-u="${u.id}">${t ? `<span class="tagu">${t}</span>` : ""}${u.many} <small>(${u.short})</small></div>`; }).join("")}</div>`;
+  // Thomas's reference sheet, word for word; the line for this problem's fact is highlighted
+  const fs = P.steps.filter(x => x.type === "factor").map(x => x.big + ">" + x.small);
+  h += `<div class="lad-extra" id="sheet"><div class="sheet-t">📄 Reference sheet</div>${F.sheet.map(([txt, big, facts]) => `<div class="sheet-l ${facts.some(([sm]) => fs.includes(big + ">" + sm)) ? "hit" : ""}">${txt}</div>`).join("")}</div>`;
   const el = document.getElementById("ladder"); el.innerHTML = h; el.classList.toggle("go", !!dir);
 }
 function answerHTML() { return P.custom ? P.answerT.h : `${fmt(P.answer)} ${name(unitOf(fam, P.spec.to), P.answer)}`; }
@@ -1024,7 +1119,9 @@ function render() {
   } else if (s.type === "calc") {
     const Sm = unitOf(fam, s.small);
     let ask, work;
-    if (s.op === "×") { ask = P.spec.kind === "mixed" || s.part ? `Change the ${N(s.a)} ${unitOf(fam, s.big).many} to ${Sm.many}: multiply` : "Now multiply"; work = `${N(s.a)} × ${N(s.b)} =`; }
+    if (s.op === "×" && P.spec.kind === "halfplus") { ask = `First the ${fmt(s.a)} whole ${name(unitOf(fam, s.big), s.a)}: multiply`; work = `${N(s.a)} × ${N(s.b)} =`; }
+    else if (s.op === "half" && P.spec.kind === "halfplus") { ask = `Now the ½ ${unitOf(fam, s.big).one}: take half of ${fmt(s.a)}`; work = `${fmt(s.a)} ÷ 2 =`; }
+    else if (s.op === "×") { ask = P.spec.kind === "mixed" || s.part ? `Change the ${N(s.a)} ${unitOf(fam, s.big).many} to ${Sm.many}: multiply` : "Now multiply"; work = `${N(s.a)} × ${N(s.b)} =`; }
     else if (s.op === "÷") { ask = s.part ? `Change the ${N(s.a)} ${unitOf(fam, s.small).many} to ${unitOf(fam, s.big).many}: divide` : "Now divide"; work = `${N(s.a)} ÷ ${N(s.b)} =`; }
     else if (s.op === "half") { ask = "Now take half"; work = `${fmt(s.a)} ÷ 2 =`; }
     else if (s.op === "same") { ask = "Same unit: what's the number?"; work = `${P.given} =`; }
