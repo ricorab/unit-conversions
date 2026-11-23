@@ -181,6 +181,9 @@
   .cal-l { font-size: 0.8rem; color: #555; text-align: center; }
   .to-note { color: #555; font-size: 0.9rem; margin-top: 6px; text-align: center; }
   .unit-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .unit-btn.cal { border-style: dashed; }
+  .unit-btn .caltag { display: block; font-size: 0.7rem; color: #666; font-weight: normal; margin-top: 2px; }
+  .unit-btn.on .caltag { color: #e7f3ff; }
   .ladder.go .rung.path { color: #0066cc; font-weight: bold; }
   .qcard { background: white; border: 2px solid #ddd; border-radius: 10px; padding: 14px; text-align: center; }
   .question { font-size: 1.6rem; font-weight: bold; line-height: 1.3; }
@@ -332,7 +335,7 @@ const FAMILIES = {
   // Time: the ladder is sec → min → hr → day → week. Months and years sit off the ladder (cal: true):
   // a month isn't a set number of days or weeks, and 52 weeks (364 days) isn't quite 365 days,
   // so years only change to months (× 12), weeks (× 52) and days (× 365), straight from the sheet.
-  time: { name: "Time", emoji: "⏰", mixEx: "2 hours 15 minutes", units: [
+  time: { name: "Time", emoji: "⏰", mixEx: "2 hours 15 minutes", splitEx: "30 months = 2 years 6 months", units: [
     { id: "sec", one: "second", many: "seconds", short: "sec", size: 1 },
     { id: "min", one: "minute", many: "minutes", short: "min", size: 60 },
     { id: "hr", one: "hour", many: "hours", short: "hr", size: 3600, an: true },
@@ -432,6 +435,17 @@ function buildProblem(spec) {
       steps.push({ type: "calc", op: "half", a: f, b: 2, value: h, big: spec.from, small: spec.to, part: 2 });
       steps.push({ type: "calc", op: "+", a: v1, b: h, value: answer, small: spec.to });
       line = `${given} = ${fmt(spec.n)} × ${fmt(f)} + ${fmt(f)} ÷ 2 = ${fmt(v1)} + ${fmt(h)} = ${fmt(answer)} ${name(T, answer)}`;
+    } else if (spec.kind === "split") {   // 30 months = 2 years 6 months (from = small unit, to = big unit)
+      const B = T, f = factor(fam, spec.to, spec.from), q = Math.floor(spec.n / f), r = spec.n % f;
+      given = `${fmt(spec.n)} ${name(S, spec.n)}`;
+      question = `Change ${given} to ${B.many} and ${S.many}.`;
+      steps.push({ type: "dir", answer: "up", from: spec.from, to: spec.to });
+      steps.push({ type: "factor", big: spec.to, small: spec.from, value: f, up: true });
+      steps.push({ type: "split", a: spec.n, b: f, q, r, big: spec.to, small: spec.from });
+      answer = q;
+      const at = `${fmt(q)} ${name(B, q)} ${fmt(r)} ${name(S, r)}`;
+      line = `${given} = ${fmt(spec.n)} ÷ ${fmt(f)} = ${fmt(q)} R ${fmt(r)} = ${at}`;
+      var answerT = { t: at, h: at };
     } else if (spec.kind === "same") {
       given = `${fmt(spec.n)} ${name(S, spec.n)}`; answer = spec.n;
       question = `How many ${T.many} are in ${given}?`;
@@ -459,7 +473,9 @@ function buildProblem(spec) {
   steps.push({ type: "gate" });
   steps.push({ type: "done" });
   steps.forEach(s => { s.fam = fam; });
-  return { spec, fam, question, line, answer, given, steps };
+  const out = { spec, fam, question, line, answer, given, steps };
+  if (spec.kind === "split") out.answerT = answerT;
+  return out;
 }
 
 /* ---------- checking ---------- */
@@ -488,6 +504,18 @@ function checkNumber(s, raw) {
   else if (s.op === "÷" && v === s.a * s.b) msg = "Careful: going up the ladder, you get <b>fewer</b> units. Divide.";
   else if (s.op === "half" && v === s.a * 2) msg = "Half means cut it in half: <b>divide by 2</b>.";
   return { ok: false, msg };
+}
+
+function checkSplit(s, raw, raw2) {
+  const e = v => String(v == null ? "" : v).trim() === "";
+  if (e(raw) || e(raw2)) return { ok: false, empty: true, msg: "Fill in both boxes: how many whole ones, and what's left over." };
+  const q = parseWhole(raw), r = parseWhole(raw2), B = unitOf(s.fam, s.big), S = unitOf(s.fam, s.small);
+  if (q === null || r === null) return { ok: false, msg: "Type whole numbers, like 2 and 6." };
+  if (q === s.q && r === s.r) return { ok: true };
+  if (q * s.b + r === s.a && r >= s.b) return { ok: false, bad: true, msg: `The leftover has to be less than ${fmt(s.b)}. Another whole ${B.one} fits!` };
+  if (q === s.q) return { ok: false, bad: true, msg: `${fmt(q)} whole ${name(B, q)} is right! Now the leftover: ${fmt(q)} × ${fmt(s.b)} = ${fmt(q * s.b)}. How many ${S.many} are left from ${fmt(s.a)}?` };
+  if (q * s.b > s.a) return { ok: false, bad: true, msg: `${fmt(q)} × ${fmt(s.b)} = ${fmt(q * s.b)}, and that's more than ${fmt(s.a)}. Try fewer whole ${B.many}.` };
+  return { ok: false, bad: true, msg: "Not quite. How many whole groups fit? Then what's left over?" };
 }
 
 /* ---------- hints: one fact + point at the operation ---------- */
@@ -519,6 +547,13 @@ function hintsFor(s) {
     out.push(H("decompose", `Multiply the rungs: ${rs.map(r => fmt(r.f)).join(" × ")}.`));
     return out;
   }
+  if (s.type === "split") {
+    const B = unitOf(fam, s.big), S = unitOf(fam, s.small), f = s.b;
+    const guess = Math.max(1, s.q);
+    return [H("rule", `${factFor(fam, s.big, s.small)} How many whole groups of ${fmt(f)} fit in ${fmt(s.a)}? The ${S.many} left over stay as ${S.many}.`),
+            H("count rungs", `Count by ${fmt(f)}s without going over ${fmt(s.a)}: ${[1, 2, 3].map(i => fmt(i * f)).join(", ")}, …`),
+            H("decompose", `Then subtract to find the leftover: ${fmt(s.a)} − (whole ${B.many} × ${fmt(f)}).`)];
+  }
   if (s.type !== "calc") return [];
   if (s.op === "same") return [H("rule", `It's the same unit, so the number stays the same: ${fmt(s.a)}.`)];
   if (s.op === "+") return [H("decompose", `Add the two parts, both in ${unitOf(fam, s.small).many} now: ${fmt(s.a)} + ${fmt(s.b)}.`)];
@@ -547,7 +582,9 @@ function hintsFor(s) {
     if (f <= 16 && n <= 10 && n > 1) out.push(H("count rungs", `Count by ${f}s, ${n} times: ${[1, 2, 3].map(i => i * f).join(", ")}, …`));
     else if (f >= 1000 && n > 1) { const th = Math.floor(f / 1000) * 1000, rest = f - th; out.push(H("decompose", rest ? `Split ${fmt(f)} into ${fmt(th)} + ${rest}: ${n} × ${fmt(th)} + ${n} × ${rest}.` : `${n} × ${fmt(f)} is like ${n} × ${f / 1000}, then thousands.`)); }
     else if (f > 16 && f % 10 === 0 && n > 1) out.push(H("scale", `${n} × ${fmt(f)}: do ${n} × ${fmt(f / 10)} = ${fmt(n * f / 10)}, then put a zero on the end.`));
+    else if (fam === "time" && f >= 100 && f < 1000 && f % 10 && n > 1) { const h = f - f % 100, t = f % 100 - f % 10, o = f % 10; out.push(H("decompose", `Split ${f} into ${[h, t, o].filter(Boolean).join(" + ")}: ${[h, t, o].filter(Boolean).map(x => `${n} × ${x}`).join(" + ")} = ${[h, t, o].filter(Boolean).map(x => fmt(n * x)).join(" + ")}.`)); }
     else if (f > 16 && n > 1) { const t = f - f % 10, o = f % 10; if (o) out.push(H("decompose", `Split ${fmt(f)} into ${t} + ${o}: ${n} × ${t} + ${n} × ${o}.`)); }
+    if (f === 12 && n > 1) out.push(H("decompose", `${n} × 12 is ${n} × 10 + ${n} × 2 = ${n * 10} + ${n * 2}.`));
     return out;
   }
   // ÷ going up
@@ -558,6 +595,7 @@ function hintsFor(s) {
   else if (f % 10 === 0 && a % 10 === 0 && f % 1000 !== 0) { let z = 0, ff = f, aa = a; while (ff % 10 === 0 && aa % 10 === 0) { ff /= 10; aa /= 10; z++; } out.push(H("scale", `Cross off ${z === 1 ? "a zero" : z + " zeros"} on both numbers: ${fmt(a)} ÷ ${fmt(f)} is the same as ${fmt(aa)} ÷ ${fmt(ff)}.`)); }
   else if (f >= 1000 && f % 1000 === 0) out.push(H("scale", `${fmt(a)} ÷ ${fmt(f)} is like ${a / 1000} ÷ ${f / 1000} (count the thousands).`));
   else if (m <= 12) out.push(H("count rungs", `Count by ${fmt(f)}s until you reach ${fmt(a)}: ${[1, 2, 3].filter(i => i <= Math.max(m, 2)).map(i => fmt(i * f)).join(", ")}${m > 3 ? ", …" : ""}`));
+  if ([12, 52, 365].includes(f)) { const g = m > 2 ? m - 1 : m + 1; out.push(H("decompose", `Guess and check: ${g} × ${fmt(f)} = ${fmt(g * f)}. Is that too small, too big, or just right for ${fmt(a)}?`)); }
   const rs = rungs(fam, s.big, s.small);
   if (rs.length > 1) { const last = rs[rs.length - 1]; out.push(H("count rungs", `Or climb one rung at a time: ${fmt(a)} ${last.to.short} ÷ ${last.f} = ${fmt(a / last.f)} ${last.from.short}. Keep climbing up to ${B.many}.`)); }
   return out;
@@ -569,6 +607,7 @@ function solutionRows(p) {
   for (const s of p.steps) {
     if (s.type === "dir") rows.push(s.answer === "same" ? `${cap(unitOf(p.fam, s.from).many)} to ${unitOf(p.fam, s.to).many}: same unit, no change.` : s.answer === "down" ? `Going down the ladder to a smaller unit (${unitOf(p.fam, s.to).many}): multiply.` : `Going up the ladder to a bigger unit (${unitOf(p.fam, s.to).many}): divide.`);
     if (s.type === "factor") rows.push(`1 ${unitOf(p.fam, s.big).one} = ${fmt(s.value)} ${name(unitOf(p.fam, s.small), s.value)}`);
+    if (s.type === "split") rows.push(`${fmt(s.a)} ÷ ${fmt(s.b)} = ${fmt(s.q)} R ${fmt(s.r)}`);
     if (s.type === "calc") rows.push(s.op === "same" ? `${fmt(s.a)} stays ${fmt(s.value)}` : s.op === "half" ? `Half of ${fmt(s.a)} = ${fmt(s.value)}` : `${fmt(s.a)} ${s.op} ${fmt(s.b)} = ${fmt(s.value)}`);
   }
   rows.push(p.line);
@@ -583,6 +622,8 @@ function amountRange(f) {
   if (f <= 128) return [1, 5]; if (f <= 1000) return [1, 4]; if (f <= 2000) return [1, 5]; if (f <= 5280) return [1, 3];
   return [1, 1];
 }
+// years: 1–10 years for months, 1–4 years for weeks and days
+function rangeFor(fam, big, f) { if (fam === "time" && big === "year") return f === 12 ? [1, 10] : [1, 4]; return amountRange(f); }
 function generateSingle(fam, from, to, rng, avoidQ) {
   rng = rng || Math.random;
   const R = (lo, hi) => lo + Math.floor(rng() * (hi - lo + 1));
@@ -590,12 +631,12 @@ function generateSingle(fam, from, to, rng, avoidQ) {
     let spec;
     if (from === to) spec = { fam, kind: "same", from, to, n: R(2, 15) };
     else if (rankOf(fam, from) > rankOf(fam, to)) {
-      const f = factor(fam, from, to), [lo, hi] = amountRange(f);
+      const f = factor(fam, from, to), [lo, hi] = rangeFor(fam, from, f);
       if (f % 2 === 0 && rng() < (hi === 1 ? 0.5 : 0.2)) spec = { fam, kind: "half", from, to };
       else if (fam === "time" && f % 2 === 0 && f <= 1440 && rng() < 0.2) spec = { fam, kind: "halfplus", from, to, n: R(1, Math.min(hi, 4)) };
       else spec = { fam, kind: "down", from, to, n: R(lo, hi) };
     } else {
-      const f = factor(fam, to, from), [lo, hi] = amountRange(f);
+      const f = factor(fam, to, from), [lo, hi] = rangeFor(fam, to, f);
       spec = { fam, kind: "up", from, to, n: R(lo, hi) * f };
     }
     const p = buildProblem(spec);
@@ -609,10 +650,17 @@ const MIXED = {
   length: [["ft", "in", ["in"]], ["yd", "ft", ["ft", "in"]], ["mi", "ft", ["ft"]], ["mi", "yd", ["yd"]]],
   time: [["hr", "min", ["min"]], ["min", "sec", ["sec"]], ["day", "hr", ["hr"]], ["week", "day", ["day"]], ["year", "month", ["month"]]]
 };
+// answers in two units (time): [small, big, fewest whole bigs, most whole bigs]
+const SPLITS = { time: [["month", "year", 1, 5], ["min", "hr", 1, 5], ["hr", "day", 1, 3], ["day", "week", 1, 5], ["sec", "min", 1, 5], ["week", "year", 1, 2]] };
 function generateMixed(fam, rng, avoidQ) {
   rng = rng || Math.random;
   const R = (lo, hi) => lo + Math.floor(rng() * (hi - lo + 1)), pick = a => a[Math.floor(rng() * a.length)];
   for (let t = 0; t < 50; t++) {
+    if (SPLITS[fam] && rng() < 0.5) {
+      const [small, big, lo, hi] = pick(SPLITS[fam]), f = factor(fam, big, small);
+      const p = buildProblem({ fam, kind: "split", from: small, to: big, n: R(lo, hi) * f + R(1, f - 1) });
+      if (p.question !== avoidQ || t > 40) return p; else continue;
+    }
     const [big, small, targets] = pick(MIXED[fam]);
     const rung = factor(fam, big, small);
     const n1 = rung >= 1000 ? R(1, 2) : R(2, 5);
@@ -887,7 +935,7 @@ function solutionRowsCustom(p) {
 const UNIT_OPTIONS = Object.entries(FAMILIES).map(([f, F]) => ({ fam: f, label: F.name, units: [...F.units].reverse().map(u => ({ key: `${f}:${u.id}`, label: `${u.many} (${u.short})` })) }));
 
 if (typeof module !== "undefined") module.exports = { FAMILIES, unitOf, rankOf, factor, rungs, fmt, parseWhole, buildProblem, checkDir, checkNumber, hintsFor, solutionRows, generateSingle, generateMixed, makeRng, MIXED, amountRange,
-  Q, qeq, qshow, parseAmount, buildCustom, parseTyped, checkCustom, hintsCustom, solutionRowsCustom, lookupUnit, UNIT_OPTIONS, ladderUnits, isCal, canConvert, practiceOK, PRACTICE_MAX, sheetFact, aOne };
+  Q, qeq, qshow, parseAmount, buildCustom, parseTyped, checkCustom, hintsCustom, solutionRowsCustom, lookupUnit, UNIT_OPTIONS, checkSplit, SPLITS, rangeFor, ladderUnits, isCal, canConvert, practiceOK, PRACTICE_MAX, sheetFact, aOne };
 </script>
 
 <!-- ======================= UI ======================= -->
@@ -946,12 +994,13 @@ function showPick() {
   const F = FAMILIES[fam], ps = pickState[fam];
   document.getElementById("pickTitle").textContent = `${F.emoji} ${F.name}`;
   const big = [...F.units].reverse();
-  document.getElementById("fromUnits").innerHTML = big.map(u => `<button class="unit-btn ${ps.from === u.id ? "on" : ""}" data-u="${u.id}" onclick="pickFrom('${u.id}')">${cap(u.many)}<small>${u.short}</small></button>`).join("");
+  const calTag = u => (u.cal ? `<span class="caltag">📅 off the ladder</span>` : "");
+  document.getElementById("fromUnits").innerHTML = big.map(u => `<button class="unit-btn ${u.cal ? "cal" : ""} ${ps.from === u.id ? "on" : ""}" data-u="${u.id}" onclick="pickFrom('${u.id}')">${cap(u.many)}<small>${u.short}</small>${calTag(u)}</button>`).join("");
   document.getElementById("toWrap").classList.toggle("hidden", !ps.from);
   if (ps.from) {
     document.getElementById("toUnits").innerHTML = big.map(u => {
       const okP = practiceOK(fam, ps.from, u.id), why = !canConvert(fam, ps.from, u.id) ? "not exact" : "too big";
-      return `<button class="unit-btn ${ps.to === u.id ? "on" : ""}" data-u="${u.id}" ${okP ? `onclick="pickTo('${u.id}')"` : `disabled title="${why}"`}>${cap(u.many)}<small>${!okP ? why : u.id === ps.from ? "same unit" : u.short}</small></button>`;
+      return `<button class="unit-btn ${u.cal ? "cal" : ""} ${ps.to === u.id ? "on" : ""}" data-u="${u.id}" ${okP ? `onclick="pickTo('${u.id}')"` : `disabled title="${why}"`}>${cap(u.many)}<small>${!okP ? why : u.id === ps.from ? "same unit" : u.short}</small>${okP ? calTag(u) : ""}</button>`;
     }).join("");
     const notes = [];
     if (big.some(u => !canConvert(fam, ps.from, u.id))) notes.push(ps.from === "month" ? "A month isn't always the same number of days (28, 29, 30 or 31), so months only change to years." : ps.from === "year" ? "Your sheet changes years into months, weeks, or days." : "Months aren't a set number of days or weeks, so they only go with years. Years go with weeks and days.");
@@ -960,8 +1009,8 @@ function showPick() {
   }
   document.getElementById("goBtn").disabled = !(ps.from && ps.to);
   const mc = document.getElementById("mixedCard");
-  if (S.mixed[fam]) { mc.className = "mixed-card open"; mc.innerHTML = `🔓 <b>Mixed units unlocked!</b> Problems like “${F.mixEx}”.<div class="start-wrap" style="margin:8px 0 0"><button id="mixedBtn" onclick="startMixed()">Mixed units ▶</button></div>`; }
-  else { mc.className = "mixed-card"; mc.innerHTML = `🔒 <b>Mixed units</b> (like ${F.mixEx}): get ${UNLOCK_AFTER} right in a row in ${F.name.toLowerCase()} to unlock. <b id="runN">${Math.min(S.run[fam], UNLOCK_AFTER)}</b> / ${UNLOCK_AFTER}`; }
+  if (S.mixed[fam]) { mc.className = "mixed-card open"; mc.innerHTML = `🔓 <b>Mixed units unlocked!</b> Problems like “${F.mixEx}”${F.splitEx ? ` and “${F.splitEx}”` : ""}.<div class="start-wrap" style="margin:8px 0 0"><button id="mixedBtn" onclick="startMixed()">Mixed units ▶</button></div>`; }
+  else { mc.className = "mixed-card"; mc.innerHTML = `🔒 <b>Mixed units</b> (like ${F.mixEx}${F.splitEx ? `, or ${F.splitEx}` : ""}): get ${UNLOCK_AFTER} right in a row in ${F.name.toLowerCase()} to unlock. <b id="runN">${Math.min(S.run[fam], UNLOCK_AFTER)}</b> / ${UNLOCK_AFTER}`; }
 }
 function pickFrom(u) { pickState[fam].from = u; pickState[fam].to = null; showPick(); const t = document.querySelector("#toUnits .unit-btn"); if (t) t.focus(); }
 function pickTo(u) { pickState[fam].to = u; showPick(); document.getElementById("goBtn").focus(); }
@@ -1035,7 +1084,7 @@ function paperForm(dec) {
 }
 function submitSplit() {
   const s = P.steps[idx], a = document.getElementById("answerInput").value, b = document.getElementById("answerInput2").value;
-  const r = checkCustom(s, a, b);
+  const r = P.custom ? checkCustom(s, a, b) : checkSplit(s, a, b);
   if (r.ok) { delete coach[idx]; advance(); return; }
   coach[idx] = r.msg;
   if (r.bad) { (tries[idx] || (tries[idx] = [])).push(`${a.trim()} R ${b.trim()}`); P.wrongs++; if (S.auto[hkey()] && (hintsShown[idx] || 0) < hintsOf(s).length) hintsShown[idx] = (hintsShown[idx] || 0) + 1; }
@@ -1091,7 +1140,7 @@ function renderLadder() {
   h += `<div class="lad-extra" id="sheet"><div class="sheet-t">📄 Reference sheet</div>${F.sheet.map(([txt, big, facts]) => `<div class="sheet-l ${facts.some(([sm]) => fs.includes(big + ">" + sm)) ? "hit" : ""}">${txt}</div>`).join("")}</div>`;
   const el = document.getElementById("ladder"); el.innerHTML = h; el.classList.toggle("go", !!dir);
 }
-function answerHTML() { return P.custom ? P.answerT.h : `${fmt(P.answer)} ${name(unitOf(fam, P.spec.to), P.answer)}`; }
+function answerHTML() { return P.answerT ? P.answerT.h : `${fmt(P.answer)} ${name(unitOf(fam, P.spec.to), P.answer)}`; }
 function render() {
   const s = P.steps[idx];
   renderLadder();
