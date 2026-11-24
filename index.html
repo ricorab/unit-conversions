@@ -174,12 +174,17 @@
   .rung { text-align: center; color: #555; font-size: 0.85rem; padding: 3px 0; }
   .rung .s { display: none; }
   .lad-extra { margin-top: 8px; border-top: 1px dashed #ccc; padding-top: 6px; text-align: center; font-size: 0.85rem; color: #555; }
-  .sheet-t { font-weight: bold; font-size: 0.8rem; color: #555; margin-bottom: 2px; }
-  .sheet-l { padding: 2px 4px; border-radius: 6px; line-height: 1.3; }
-  .ladder.go .sheet-l.hit { background: #e7f3ff; color: #0066cc; font-weight: bold; }
   .lad-cal { margin-top: 8px; border-top: 1px dashed #ccc; padding-top: 6px; display: flex; flex-direction: column; gap: 6px; }
   .cal-l { font-size: 0.8rem; color: #555; text-align: center; }
   .to-note { color: #555; font-size: 0.9rem; margin-top: 6px; text-align: center; }
+  .ways { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+  .choice.way { min-width: 220px; font-size: 1.35rem; font-weight: bold; text-align: left; }
+  .choice.way small { display: block; font-size: 0.85rem; font-weight: normal; }
+  .sub.found { color: #1e7e34; font-weight: bold; }
+  .gate-steps { text-align: left; display: inline-block; margin: 6px auto; padding-left: 1.6em; font-size: 1.2rem; font-weight: bold; line-height: 1.6; }
+  .work input#answerInput { margin: 0 4px; }
+  .rung.known .l { color: #1e7e34; }
+  .lu.hub { border-color: #1e7e34; background: #eaf7ee; } .lu.hub .tagu { background: #1e7e34; }
   .unit-btn:disabled { opacity: 0.45; cursor: not-allowed; }
   .unit-btn.cal { border-style: dashed; }
   .unit-btn .caltag { display: block; font-size: 0.7rem; color: #666; font-weight: normal; margin-top: 2px; }
@@ -213,12 +218,13 @@
     .lad { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px; }
     .lu { padding: 2px 6px; font-size: 0.85rem; } .lu small { display: none; } .lu .tagu { display: none; }
     .rung { font-size: 0.75rem; padding: 0 2px; } .rung .l { display: none; } .rung .s { display: inline; }
-    .lad-extra { margin-top: 4px; padding-top: 3px; font-size: 0.75rem; } .sheet-t { display: none; } .sheet-l { padding: 0 4px; }
+    .lad-extra { margin-top: 4px; padding-top: 3px; font-size: 0.75rem; }
     .lad-cal { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; margin-top: 4px; padding-top: 3px; } .cal-l { font-size: 0.75rem; }
     .question { font-size: 1.3rem; } .gate-line { white-space: normal; font-size: 1.35rem; } .work { font-size: 1.4rem; } .input-area input { width: 110px; }
     .dirs .choice { min-width: 0; width: 100%; }
     .choice.pred { min-width: 0; flex: 1 1 140px; font-size: 1.2rem; } .choice.pred.same { flex-basis: 100%; max-width: none; }
     .dirbadge .sarr { margin: 0 2px; }
+    .choice.way { min-width: 0; flex: 1 1 100%; font-size: 1.2rem; } .gate-steps { font-size: 1rem; }
     .unit-btn { min-width: 0; padding: 8px 12px; font-size: 1rem; }
     .cu-amt { width: 100px; } .usel { font-size: 1rem; } #answerInput2 { width: 80px; font-size: 1.4rem; } .input-area input { width: 80px; }
   }
@@ -402,11 +408,69 @@ function parseWhole(raw) {
   return /^\d+$/.test(s) ? parseInt(s, 10) : null;
 }
 
+/* ===================== FACTS KIDS RECALL + THE PATH THROUGH THEM ===================== */
+// The facts a student is asked to remember (big → small). Everything else is built from these.
+const RECALL = {
+  capacity: [["gallon", "quart", 4], ["quart", "pint", 2], ["pint", "cup", 2], ["cup", "floz", 8], ["floz", "tbsp", 2], ["tbsp", "tsp", 3],
+             ["gallon", "floz", 128], ["quart", "floz", 32], ["pint", "floz", 16], ["floz", "tsp", 6]],
+  weight: [["lb", "oz", 16], ["ton", "lb", 2000]],
+  length: [["ft", "in", 12], ["yd", "ft", 3], ["yd", "in", 36], ["mi", "ft", 5280]],
+  time: [["min", "sec", 60], ["hr", "min", 60], ["day", "hr", 24], ["week", "day", 7], ["year", "month", 12], ["year", "week", 52], ["year", "day", 365]]
+};
+// hub units: both units are changed into the hub, then connected (gal → c: 128 fl oz and 8 fl oz)
+const HUBS = { capacity: ["floz"], weight: ["oz"], length: ["in", "ft"], time: [] };
+function recallF(fam, big, small) { const r = RECALL[fam].find(([a, b]) => a === big && b === small); return r ? r[2] : null; }
+// fact → one step; hub → two facts + connect; chain → facts multiplied together (1 wk = 7 days, 1 day = 24 hr → 168)
+function planFactor(fam, big, small) {
+  const f = factor(fam, big, small);
+  if (recallF(fam, big, small) !== null) return { kind: "fact", f };
+  for (const hub of HUBS[fam]) { const a = recallF(fam, big, hub), b = recallF(fam, small, hub); if (a && b) return { kind: "hub", hub, a, b, f }; }
+  // shortest chain of recall facts going down (breadth first)
+  const q = [[big, []]], seen = new Set([big]);
+  while (q.length) {
+    const [u, path] = q.shift();
+    for (const [a, b, n] of RECALL[fam]) if (a === u && !seen.has(b) && rankOf(fam, b) >= rankOf(fam, small) && !isCal(fam, b)) {
+      const np = path.concat([[a, b, n]]);
+      if (b === small) return { kind: "chain", hops: np, f };
+      seen.add(b); q.push([b, np]);
+    }
+  }
+  return { kind: "chain", hops: rungs(fam, big, small).map(r => [r.from.id, r.to.id, r.f]), f };
+}
+// the steps (and paper lines) that find "1 big = ? small"
+function factorPath(fam, big, small, up) {
+  const pl = planFactor(fam, big, small), B = unitOf(fam, big), S = unitOf(fam, small), steps = [], lines = [];
+  const factLine = (a, b, n) => `1 ${unitOf(fam, a).one} = ${fmt(n)} ${name(unitOf(fam, b), n)}`;
+  if (pl.kind === "fact") steps.push({ type: "factor", big, small, value: pl.f, up: !!up });
+  else if (pl.kind === "hub") {
+    const Hb = unitOf(fam, pl.hub);
+    steps.push({ type: "factor", big, small: pl.hub, value: pl.a, path: true }); lines.push(factLine(big, pl.hub, pl.a));
+    steps.push({ type: "factor", big: small, small: pl.hub, value: pl.b, path: true }); lines.push(factLine(small, pl.hub, pl.b));
+    steps.push({ type: "connect", big, small, hub: pl.hub, a: pl.a, b: pl.b, value: pl.f, up: !!up, lineIdx: lines.length });
+    lines.push(connectLine(fam, steps[steps.length - 1], "div"));
+  } else {
+    let acc = null, top = big;
+    pl.hops.forEach(([a, b, n], i) => {
+      steps.push({ type: "factor", big: a, small: b, value: n, path: true }); lines.push(factLine(a, b, n));
+      if (i === 0) { acc = n; return; }
+      const v = acc * n;
+      steps.push({ type: "chain", op: "×", a: acc, b: n, value: v, big: top, mid: a, small: b });
+      lines.push(`${fmt(acc)} × ${fmt(n)} = ${fmt(v)}, so ${factLine(top, b, v)}`); acc = v;
+    });
+  }
+  return { steps, lines, plan: pl };
+}
+function connectLine(fam, s, way) {
+  const B = unitOf(fam, s.big), S = unitOf(fam, s.small), so = `so 1 ${B.one} = ${fmt(s.value)} ${name(S, s.value)}`;
+  return way === "mul" ? `${fmt(s.value)} × ${fmt(s.b)} = ${fmt(s.a)}, ${so}` : `${fmt(s.a)} ÷ ${fmt(s.b)} = ${fmt(s.value)}, ${so}`;
+}
+
 /* ===================== ONE PROBLEM = A LIST OF STEPS ===================== */
 // spec: { fam, kind: "down"|"up"|"half"|"same"|"mixed", from, to, n, parts:[{n,unit},{n,unit}] }
 function buildProblem(spec) {
   const { fam } = spec, F = FAMILIES[fam];
-  const steps = [];
+  const steps = [], pathLines = [];
+  const addFactor = (big, small, up) => { const fp = factorPath(fam, big, small, up); fp.steps.forEach(x => { if (x.lineIdx !== undefined) x.lineIdx += pathLines.length; }); steps.push(...fp.steps); pathLines.push(...fp.lines); };
   const T = unitOf(fam, spec.to);
   let question, line, answer, given;
   if (spec.kind === "mixed") {
@@ -415,12 +479,12 @@ function buildProblem(spec) {
     question = `How many ${T.many} are in ${given}?`;
     steps.push({ type: "dir", answer: "down", from: p1.unit, to: spec.to });
     const f1 = factor(fam, p1.unit, spec.to), v1 = p1.n * f1;
-    steps.push({ type: "factor", big: p1.unit, small: spec.to, value: f1 });
+    addFactor(p1.unit, spec.to);
     steps.push({ type: "calc", op: "×", a: p1.n, b: f1, value: v1, big: p1.unit, small: spec.to, part: 1 });
     let v2 = p2.n, f2 = 1;
     if (p2.unit !== spec.to) {
       f2 = factor(fam, p2.unit, spec.to); v2 = p2.n * f2;
-      steps.push({ type: "factor", big: p2.unit, small: spec.to, value: f2 });
+      addFactor(p2.unit, spec.to);
       steps.push({ type: "calc", op: "×", a: p2.n, b: f2, value: v2, big: p2.unit, small: spec.to, part: 2 });
     }
     answer = v1 + v2;
@@ -433,7 +497,7 @@ function buildProblem(spec) {
       const f = factor(fam, spec.from, spec.to); answer = f / 2;
       question = `How many ${T.many} are in half ${aOne(S)}?`;
       steps.push({ type: "dir", answer: "down", from: spec.from, to: spec.to });
-      steps.push({ type: "factor", big: spec.from, small: spec.to, value: f });
+      addFactor(spec.from, spec.to);
       steps.push({ type: "calc", op: "half", a: f, b: 2, value: answer, big: spec.from, small: spec.to });
       line = `½ ${S.one} = ${fmt(f)} ÷ 2 = ${fmt(answer)} ${name(T, answer)}`;
     } else if (spec.kind === "halfplus") {
@@ -441,7 +505,7 @@ function buildProblem(spec) {
       given = `${fmt(spec.n)} ½ ${S.many}`;
       question = `How many ${T.many} are in ${given}?`;
       steps.push({ type: "dir", answer: "down", from: spec.from, to: spec.to });
-      steps.push({ type: "factor", big: spec.from, small: spec.to, value: f });
+      addFactor(spec.from, spec.to);
       steps.push({ type: "calc", op: "×", a: spec.n, b: f, value: v1, big: spec.from, small: spec.to, part: 1 });
       steps.push({ type: "calc", op: "half", a: f, b: 2, value: h, big: spec.from, small: spec.to, part: 2 });
       steps.push({ type: "calc", op: "+", a: v1, b: h, value: answer, small: spec.to });
@@ -451,7 +515,7 @@ function buildProblem(spec) {
       given = `${fmt(spec.n)} ${name(S, spec.n)}`;
       question = `Change ${given} to ${B.many} and ${S.many}.`;
       steps.push({ type: "dir", answer: "up", from: spec.from, to: spec.to });
-      steps.push({ type: "factor", big: spec.to, small: spec.from, value: f, up: true });
+      addFactor(spec.to, spec.from, true);
       steps.push({ type: "split", a: spec.n, b: f, q, r, big: spec.to, small: spec.from });
       answer = q;
       const at = `${fmt(q)} ${name(B, q)} ${fmt(r)} ${name(S, r)}`;
@@ -468,7 +532,7 @@ function buildProblem(spec) {
       given = `${fmt(spec.n)} ${name(S, spec.n)}`;
       question = `How many ${T.many} are in ${given}?`;
       steps.push({ type: "dir", answer: "down", from: spec.from, to: spec.to });
-      steps.push({ type: "factor", big: spec.from, small: spec.to, value: f });
+      addFactor(spec.from, spec.to);
       steps.push({ type: "calc", op: "×", a: spec.n, b: f, value: answer, big: spec.from, small: spec.to });
       line = `${given} = ${fmt(spec.n)} × ${fmt(f)} = ${fmt(answer)} ${name(T, answer)}`;
     } else { // up
@@ -476,7 +540,7 @@ function buildProblem(spec) {
       given = `${fmt(spec.n)} ${name(S, spec.n)}`;
       question = `How many ${T.many} are in ${given}?`;
       steps.push({ type: "dir", answer: "up", from: spec.from, to: spec.to });
-      steps.push({ type: "factor", big: spec.to, small: spec.from, value: f, up: true });
+      addFactor(spec.to, spec.from, true);
       steps.push({ type: "calc", op: "÷", a: spec.n, b: f, value: answer, big: spec.to, small: spec.from });
       line = `${given} = ${fmt(spec.n)} ÷ ${fmt(f)} = ${fmt(answer)} ${name(T, answer)}`;
     }
@@ -484,7 +548,7 @@ function buildProblem(spec) {
   steps.push({ type: "gate" });
   steps.push({ type: "done" });
   steps.forEach(s => { s.fam = fam; });
-  const out = { spec, fam, question, line, answer, given, steps };
+  const out = { spec, fam, question, line, answer, given, steps, lines: pathLines };
   if (spec.kind === "split") out.answerT = answerT;
   return out;
 }
@@ -512,8 +576,12 @@ function checkNumber(s, raw) {
   let msg = "Not quite. Try again!";
   if (s.type === "factor") {
     const rs = rungs(s.fam, s.big, s.small); let acc = 1;
-    for (let i = 0; i < rs.length - 1; i++) { acc *= rs[i].f; if (v === acc) { msg = `That's how many ${rs[i].to.many} are in 1 ${rs[0].from.one}. Keep going down the ladder to ${unitOf(s.fam, s.small).many}.`; break; } }
-    if (rs.length === 1 && v !== s.value) msg = `Check the ladder: find 1 ${unitOf(s.fam, s.big).one} = ? ${unitOf(s.fam, s.small).many}.`;
+    msg = "Not quite. Think again, or tap 💡 Hint for a way to remember it.";
+    for (let i = 0; i < rs.length - 1; i++) { acc *= rs[i].f; if (v === acc) { msg = `That's how many ${rs[i].to.many} are in 1 ${rs[0].from.one}. ${cap(unitOf(s.fam, s.small).many)} are even smaller: keep going.`; break; } }
+  } else if (s.type === "connect") {
+    if (v === s.a * s.b) msg = `That's ${fmt(s.a)} × ${fmt(s.b)}. We need how many ${fmt(s.b)}s fit in ${fmt(s.a)}: the answer is smaller than ${fmt(s.a)}.`;
+    else if (v === s.a - s.b || v === s.a + s.b) msg = `Not + or −. How many groups of ${fmt(s.b)} make ${fmt(s.a)}?`;
+    else msg = `Check it: ${fmt(v)} × ${fmt(s.b)} = ${fmt(v * s.b)}. We need ${fmt(s.a)}.`;
   } else if (s.op === "×" && v === s.a + s.b) msg = "That's what you get when you add. This one is multiplication.";
   else if (s.op === "×" && s.b !== 0 && v * s.b === s.a) msg = "Careful: the number should get <b>bigger</b> here. × <b>Multiply</b>.";
   else if (s.op === "÷" && v === s.a * s.b) msg = "Careful: the number should get <b>smaller</b> here. ÷ <b>Divide</b>.";
@@ -546,21 +614,26 @@ function hintsFor(s) {
     if (s.answer === "same") return [H("rule", `${cap(F.many)} to ${T.many}: it's the same unit! The number stays the same.`)];
     const where = rankOf(fam, s.to) < rankOf(fam, s.from) ? "below" : "above";
     return [H("rule", "Smaller pieces? You need MORE of them: the number gets bigger, so × multiply. Bigger pieces? You need FEWER: the number gets smaller, so ÷ divide."),
-            isCal(fam, s.from) || isCal(fam, s.to) ? H("point", `A ${rankOf(fam, s.to) < rankOf(fam, s.from) ? F.one : T.one} is longer than a ${rankOf(fam, s.to) < rankOf(fam, s.from) ? T.one : F.one}. Check the table: 1 year = 12 months = 52 weeks = 365 days.`) : H("point", `On the ladder, ${T.many} are ${where} ${F.many}: ${where === "below" ? "smaller" : "bigger"} pieces.`)];
+            isCal(fam, s.from) || isCal(fam, s.to) ? H("point", `A ${rankOf(fam, s.to) < rankOf(fam, s.from) ? F.one : T.one} is longer than a ${rankOf(fam, s.to) < rankOf(fam, s.from) ? T.one : F.one}.`) : H("point", `On the ladder, ${T.many} are ${where} ${F.many}: ${where === "below" ? "smaller" : "bigger"} pieces.`)];
   }
   if (s.type === "factor") {
-    const rs = rungs(fam, s.big, s.small), B = unitOf(fam, s.big), S = unitOf(fam, s.small);
-    const direct = FAMILIES[fam].extra.some(([a, b]) => a === s.big && b === s.small);
-    if (isCal(fam, s.big) || isCal(fam, s.small)) return [H("rule", `Look at the table: 1 ${B.one} = ${fmt(s.value)} ${name(S, s.value)}.`), H("point", `Find the line that starts with 1 year. ${cap(B.many)} aren't on the ladder: a month isn't always the same number of days.`)];
-    if (rs.length === 1) return [H("rule", `Look at the table: 1 ${B.short} = ${fmt(s.value)} ${S.short}.`), H("point", `Find ${B.many} on the ladder. The rung right under it tells how many ${S.many} are in one.`)];
-    if (direct) return [H("rule", `Look at the table: 1 ${B.short} = ${fmt(s.value)} ${S.short}.`), H("count rungs", `Or count the rungs down: ${rungsText(rs)}. Multiply: ${rs.map(r => fmt(r.f)).join(" × ")}.`)];
-    // a short cut through a fact on the table (1 mi = 5,280 ft)
-    const via = FAMILIES[fam].extra.filter(([a, b]) => a === s.big && rankOf(fam, b) > rankOf(fam, s.small) && sheetFact(fam, b, s.small) !== null).sort((x, y) => rankOf(fam, x[1]) - rankOf(fam, y[1]))[0];
-    if (via) { const mid = unitOf(fam, via[1]), f1 = factor(fam, s.big, via[1]), f2 = factor(fam, via[1], s.small);
-      return [H("count rungs", `Start with a fact from the table: 1 ${B.short} = ${fmt(f1)} ${mid.short}. Then go down to ${S.many}: 1 ${mid.short} = ${fmt(f2)} ${S.short}.`), H("decompose", `Multiply: ${fmt(f1)} × ${fmt(f2)}.`)]; }
-    const out = [H("count rungs", `Count the rungs from ${B.one} down to ${S.one}: ${rungsText(rs)}.`)];
-    out.push(H("decompose", `Multiply the rungs: ${rs.map(r => fmt(r.f)).join(" × ")}.`));
+    const B = unitOf(fam, s.big), S = unitOf(fam, s.small), tips = (FACTHINTS[fam] || {})[s.big + ">" + s.small];
+    const reveal = H("rule", `Here it is: 1 ${B.one} = ${fmt(s.value)} ${name(S, s.value)}.`);
+    if (tips) return tips.map(([t, x]) => H(t, x)).concat([reveal]);
+    const rs = rungs(fam, s.big, s.small);
+    if (rs.length > 1 && !isCal(fam, s.big)) return [H("count rungs", `Count the rungs from ${B.one} down to ${S.one}, and multiply what you know about each one.`), reveal];
+    return [reveal];
+  }
+  if (s.type === "connect") {
+    const B = unitOf(fam, s.big), S = unitOf(fam, s.small), Hb = unitOf(fam, s.hub), a = s.a, b = s.b;
+    const out = [H("rule", `Both facts are in ${Hb.many}. 1 ${B.one} is ${fmt(a)} ${Hb.many} and 1 ${S.one} is ${fmt(b)}. How many ${S.many} fill 1 ${B.one}? That's how many ${fmt(b)}s fit in ${fmt(a)}.`)];
+    if ((b & (b - 1)) === 0 && b > 1) { const st = []; let x = a, y = b; while (y > 1) { st.push(`${fmt(x)} ÷ ${fmt(y)}`); x /= 2; y /= 2; } out.push(H("halve", `Halve both numbers. It's the same answer each time: ${st.join(" is the same as ")}.`)); }
+    else { const parts = []; let q = s.value, pv = 1; while (q > 0) { const d = q % 10; if (d) parts.unshift(d * pv * b); q = Math.floor(q / 10); pv *= 10; } if (parts.length > 1) out.push(H("decompose", `Break ${fmt(a)} into easy pieces of ${fmt(b)}s: ${parts.map(fmt).join(" + ")}. Divide each piece by ${fmt(b)}.`)); else out.push(H("count rungs", `Count by ${fmt(b)}s until you reach ${fmt(a)}.`)); }
     return out;
+  }
+  if (s.type === "chain") {
+    const A = unitOf(fam, s.big), M = unitOf(fam, s.mid), S = unitOf(fam, s.small);
+    return [H("rule", `Put the facts together: 1 ${A.one} = ${fmt(s.a)} ${M.many}, and each ${M.one} is ${fmt(s.b)} ${S.many}. Multiply: ${fmt(s.a)} × ${fmt(s.b)}.`), mulStrategy(s.a, s.b)];
   }
   if (s.type === "split") {
     const B = unitOf(fam, s.big), S = unitOf(fam, s.small), f = s.b;
@@ -612,10 +685,53 @@ function hintsFor(s) {
   else if (m <= 12) out.push(H("count rungs", `Count by ${fmt(f)}s until you reach ${fmt(a)}: ${[1, 2, 3].filter(i => i <= Math.max(m, 2)).map(i => fmt(i * f)).join(", ")}${m > 3 ? ", …" : ""}`));
   if ([12, 52, 365].includes(f)) { const g = m > 2 ? m - 1 : m + 1; out.push(H("decompose", `Guess and check: ${g} × ${fmt(f)} = ${fmt(g * f)}. Is that too small, too big, or just right for ${fmt(a)}?`)); }
   const rs = rungs(fam, s.big, s.small);
-  if (rs.length > 1) { const last = rs[rs.length - 1]; out.push(H("count rungs", `Or climb one rung at a time: ${fmt(a)} ${last.to.short} ÷ ${last.f} = ${fmt(a / last.f)} ${last.from.short}. Keep climbing up to ${B.many}.`)); }
+
   return out;
 }
 
+function mulStrategy(a, b) {
+  if (b % 10 === 0 && b < 1000) return H("scale", `${fmt(a)} × ${fmt(b)}: do ${fmt(a)} × ${fmt(b / 10)} = ${fmt(a * b / 10)}, then put a zero on the end.`);
+  if (a % 10 === 0 && a < 1000) return H("scale", `${fmt(a)} × ${fmt(b)}: do ${fmt(a / 10)} × ${fmt(b)} = ${fmt(a * b / 10)}, then put a zero on the end.`);
+  if (b >= 1000) { const th = Math.floor(b / 1000) * 1000, r = b - th; return H("decompose", r ? `Split ${fmt(b)} into ${fmt(th)} + ${fmt(r)}: ${fmt(a)} × ${fmt(th)} + ${fmt(a)} × ${fmt(r)}.` : `${fmt(a)} × ${fmt(b)} is like ${fmt(a)} × ${b / 1000}, then thousands.`); }
+  if (a >= 1000) { const th = Math.floor(a / 1000) * 1000, r = a - th; return H("decompose", r ? `Split ${fmt(a)} into ${fmt(th)} + ${fmt(r)}: ${fmt(th)} × ${fmt(b)} + ${fmt(r)} × ${fmt(b)}.` : `${fmt(a)} × ${fmt(b)} is like ${a / 1000} × ${fmt(b)}, then thousands.`); }
+  const [x, y] = b > a ? [a, b] : [b, a];
+  if (y > 12) { const t = y - y % 10, o = y % 10; return H("decompose", o ? `Split ${y} into ${t} + ${o}: ${x} × ${t} + ${x} × ${o}.` : `${x} × ${y}: do ${x} × ${y / 10}, then put a zero on the end.`); }
+  return H("count rungs", `Count by ${y}s, ${x} times: ${[1, 2, 3].map(i => i * y).join(", ")}, …`);
+}
+// recall strategies: how to REMEMBER each fact (the last hint, added by hintsFor, reveals it)
+const FACTHINTS = {
+  capacity: {
+    "gallon>quart": [["rule", "Think of a gallon of milk. A QUARt is a QUARter of a gallon. How many quarters make a whole?"]],
+    "quart>pint": [["halve", "A pint is half of a quart. How many halves make a whole?"]],
+    "pint>cup": [["rule", "Picture the Gallon Man: inside each Pint are Cups. A pint is double a cup."]],
+    "cup>floz": [["halve", "Remember “a pint's a pound the world around”: a pint is 16 fluid ounces, like a pound is 16 ounces. A cup is half a pint."]],
+    "floz>tbsp": [["rule", "A tablespoon is the big spoon. It takes a couple of big spoonfuls to fill 1 fluid ounce."]],
+    "tbsp>tsp": [["triple", "Tablespoon is the BIG spoon, teaspoon is the little one. Think “T is for Three”: how many little spoons fill the big one?"]],
+    "floz>tsp": [["decompose", "Go through tablespoons: how many tablespoons fill 1 fl oz, and how many teaspoons fill each tablespoon? Multiply them."]],
+    "gallon>floz": [["double", "Start from a cup (8 fl oz) and keep doubling: cup → pint → quart → half gallon → gallon. That's doubling 4 times."]],
+    "quart>floz": [["double", "Start from a cup (8 fl oz) and double: a pint is 2 cups, a quart is 2 pints."]],
+    "pint>floz": [["double", "A pint is 2 cups. Double the fluid ounces in 1 cup."]]
+  },
+  weight: {
+    "lb>oz": [["rule", "Remember “a pint's a pound the world around”: a pound has the same number of ounces as a pint has fluid ounces. How many cups in a pint? How many fluid ounces in each cup?"], ["decompose", "Or think of butter: a 1-pound box has 4 sticks, and each stick is 4 ounces."]],
+    "ton>lb": [["rule", "A ton is a really heavy load, like a small car. Its pounds are a big round number in the thousands: think “T for Two”."]]
+  },
+  length: {
+    "ft>in": [["rule", "Think of a 1-foot ruler. Count the inch numbers on it, up to the end."]],
+    "yd>ft": [["rule", "A yardstick is as long as some 1-foot rulers laid end to end. How many rulers fit?"]],
+    "yd>in": [["decompose", "A yardstick is 3 one-foot rulers, and each ruler has 12 inches."]],
+    "mi>ft": [["rule", "Say “five tomatoes” fast: five-to-ma-toes → 5-2-8-0."]]
+  },
+  time: {
+    "min>sec": [["rule", "Watch the second hand: it goes once around the clock in one minute. Count the little marks on the clock face (by 5s at each number)."]],
+    "hr>min": [["rule", "The minute hand goes once around the clock in one hour. Count the little marks by 5s at each number."]],
+    "day>hr": [["double", "The hour hand goes around the 12-hour clock twice each day: once for a.m., once for p.m."]],
+    "week>day": [["rule", "Say the days of the week: Sunday, Monday, … Saturday. How many did you say?"]],
+    "year>month": [["rule", "Say the months: January, February, … December. How many did you say?"]],
+    "year>week": [["decompose", "A month is about 4 weeks: 12 × 4 = 48, plus about 4 more weeks for the extra days."]],
+    "year>day": [["rule", "It's the days for Earth to go once around the Sun: three hundred sixty-something (one more in a leap year)."]]
+  }
+};
 /* ---------- whole worked solution ---------- */
 function dirRow(fam, s) {
   const F = unitOf(fam, s.from), T = unitOf(fam, s.to);
@@ -628,6 +744,8 @@ function solutionRows(p) {
     if (s.type === "dir") rows.push(dirRow(p.fam, s));
     if (s.type === "factor") rows.push(`1 ${unitOf(p.fam, s.big).one} = ${fmt(s.value)} ${name(unitOf(p.fam, s.small), s.value)}`);
     if (s.type === "split") rows.push(`${fmt(s.a)} ÷ ${fmt(s.b)} = ${fmt(s.q)} R ${fmt(s.r)}`);
+    if (s.type === "connect") rows.push(connectLine(p.fam, s, (p.way && p.way[p.steps.indexOf(s)]) || "div"));
+    if (s.type === "chain") rows.push(`${fmt(s.a)} × ${fmt(s.b)} = ${fmt(s.value)}, so 1 ${unitOf(p.fam, s.big).one} = ${fmt(s.value)} ${name(unitOf(p.fam, s.small), s.value)}`);
     if (s.type === "calc") rows.push(s.op === "same" ? `${fmt(s.a)} stays ${fmt(s.value)}` : s.op === "half" ? `Half of ${fmt(s.a)} = ${fmt(s.value)}` : `${fmt(s.a)} ${s.op} ${fmt(s.b)} = ${fmt(s.value)}`);
   }
   rows.push(p.line);
@@ -775,13 +893,14 @@ function buildCustom(input) {
   if (to2 && rankOf(fam, to2) > rankOf(fam, to)) throw new KidErr(`Put the bigger unit first: ${unitOf(fam, to2).many} and ${unitOf(fam, to).many}.`);
   const calMsg = (a, b) => (a === "month" || b === "month")
     ? "A month isn't always the same number of days (some have 30 or 31, February has 28 or 29). So months only change to years, and years to months."
-    : `Your reference sheet changes years only into months, weeks, or days. Change the years to days first, then the days to ${unitOf(fam, a === "year" ? b : a).many} as a new problem.`;
+    : `Years only change into months, weeks, or days. Change the years to days first, then the days to ${unitOf(fam, a === "year" ? b : a).many} as a new problem.`;
   { const W0 = to2 || to; for (const p of P) if (!canConvert(fam, p.unit, W0)) throw new KidErr(calMsg(p.unit, W0)); if (to2 && !canConvert(fam, to, to2)) throw new KidErr(calMsg(to, to2)); }
   const dm = !!input.dm || got.some(g => g.dec);
   const sh = q => qshow(q, dm);
   const nm = (u, q) => (qnum(q) > 0 && qnum(q) <= 1 ? u.one : u.many);
   const W = to2 || to, WU = unitOf(fam, W);
-  const steps = [], terms = [], vals = [];
+  const steps = [], terms = [], vals = [], pathLines = [];
+  const addFactor = (big, small, up) => { const fp = factorPath(fam, big, small, up); fp.steps.forEach(x => { if (x.lineIdx !== undefined) x.lineIdx += pathLines.length; }); steps.push(...fp.steps); pathLines.push(...fp.lines); };
   let anyConv = false;
   for (const p of P) {
     const U = unitOf(fam, p.unit);
@@ -791,13 +910,13 @@ function buildCustom(input) {
     } else if (rankOf(fam, p.unit) > rankOf(fam, W)) {
       const f = factor(fam, p.unit, W), v = qmul(p.q, Q(f)); anyConv = true;
       steps.push({ type: "dir", answer: "down", from: p.unit, to: W });
-      steps.push({ type: "factor", big: p.unit, small: W, value: f });
+      addFactor(p.unit, W);
       steps.push({ type: "calc", exact: true, op: "×", a: p.q, b: Q(f), value: v, big: p.unit, small: W, part: P.length > 1 });
       terms.push({ t: `${sh(p.q).t} × ${fmt(f)}`, h: `${sh(p.q).h} × ${fmt(f)}` }); vals.push(v);
     } else {
       const f = factor(fam, W, p.unit), v = qdiv(p.q, Q(f)); anyConv = true;
       steps.push({ type: "dir", answer: "up", from: p.unit, to: W });
-      steps.push({ type: "factor", big: W, small: p.unit, value: f, up: true });
+      addFactor(W, p.unit, true);
       steps.push({ type: "calc", exact: true, op: "÷", a: p.q, b: Q(f), value: v, big: W, small: p.unit, part: P.length > 1, partUnit: p.unit });
       terms.push({ t: `${sh(p.q).t} ÷ ${fmt(f)}`, h: `${sh(p.q).h} ÷ ${fmt(f)}` }); vals.push(v);
     }
@@ -816,7 +935,7 @@ function buildCustom(input) {
     const T = unitOf(fam, to), f = factor(fam, to, to2);
     if (anyConv || P.length > 1) add({ t: `${sh(total).t} ${nm(WU, total)}`, h: `${sh(total).h} ${nm(WU, total)}` });
     steps.push({ type: "dir", answer: "up", from: to2, to });
-    steps.push({ type: "factor", big: to, small: to2, value: f, up: true });
+    addFactor(to, to2, true);
     const q = qfloor(qdiv(total, Q(f))), r = qsub(total, qmul(q, Q(f)));
     steps.push({ type: "split", a: total, b: Q(f), q, r, big: to, small: to2 });
     add({ t: `${sh(total).t} ÷ ${fmt(f)}`, h: `${sh(total).h} ÷ ${fmt(f)}` });
@@ -847,7 +966,7 @@ function buildCustom(input) {
   steps.push({ type: "gate" }); steps.push({ type: "done" });
   steps.forEach(s => s.fam = fam);
   const question = to2 ? `Change ${given.h} to ${unitOf(fam, to).many} and ${WU.many}.` : `How many ${WU.many} are in ${given.h}?`;
-  return { custom: true, fam, dm, spec: { kind: "custom", from: P[0].unit, to: W, toBig: to2 ? to : null, parts: P }, question, given: given.h, givenT: given.t, line: lineH, lineT, answer, answerT, alt, steps };
+  return { custom: true, fam, dm, spec: { kind: "custom", from: P[0].unit, to: W, toBig: to2 ? to : null, parts: P }, question, given: given.h, givenT: given.t, line: lineH, lineT, lines: pathLines, answer, answerT, alt, steps };
 }
 
 /* ---------- reading a typed problem: "3 gal = ___ qt", "how many cups in 2 quarts", "50 in = __ ft __ in" ---------- */
@@ -894,7 +1013,7 @@ function parseExactAnswer(raw, step) {
   const a = parseAmount(s); return a ? a.q : null;
 }
 function checkCustom(s, raw, raw2) {
-  if (s.type === "factor") return checkNumber(s, raw);
+  if (s.type === "factor" || s.type === "connect" || s.type === "chain") return checkNumber(s, raw);
   const empty = v => String(v == null ? "" : v).trim() === "";
   if (s.type === "split") {
     if (empty(raw) || empty(raw2)) return { ok: false, empty: true, msg: "Fill in both boxes: how many whole ones, and what's left over." };
@@ -916,7 +1035,7 @@ function checkCustom(s, raw, raw2) {
   return { ok: false, bad: true, msg };
 }
 function hintsCustom(s) {
-  if (s.type === "dir" || s.type === "factor") return hintsFor(s);
+  if (["dir", "factor", "connect", "chain"].includes(s.type)) return hintsFor(s);
   if (s.type !== "calc" && s.type !== "split") return [];
   const fam = s.fam, sh = q => qshow(q, false).t;
   if (s.type === "split") {
@@ -946,6 +1065,8 @@ function solutionRowsCustom(p) {
   for (const s of p.steps) {
     if (s.type === "dir") rows.push(dirRow(p.fam, s));
     if (s.type === "factor") rows.push(`1 ${unitOf(p.fam, s.big).one} = ${fmt(s.value)} ${name(unitOf(p.fam, s.small), s.value)}`);
+    if (s.type === "connect") rows.push(connectLine(p.fam, s, (p.way && p.way[p.steps.indexOf(s)]) || "div"));
+    if (s.type === "chain") rows.push(`${fmt(s.a)} × ${fmt(s.b)} = ${fmt(s.value)}, so 1 ${unitOf(p.fam, s.big).one} = ${fmt(s.value)} ${name(unitOf(p.fam, s.small), s.value)}`);
     if (s.type === "calc") rows.push(s.op === "same" ? `${sh(s.a)} stays ${sh(s.value)}` : `${sh(s.a)} ${s.op} ${sh(s.b)} = ${sh(s.value)}`);
     if (s.type === "split") rows.push(`${sh(s.a)} ÷ ${sh(s.b)} = ${sh(s.q)} R ${sh(s.r)}`);
   }
@@ -955,7 +1076,7 @@ function solutionRowsCustom(p) {
 const UNIT_OPTIONS = Object.entries(FAMILIES).map(([f, F]) => ({ fam: f, label: F.name, units: [...F.units].reverse().map(u => ({ key: `${f}:${u.id}`, label: `${u.many} (${u.short})` })) }));
 
 if (typeof module !== "undefined") module.exports = { FAMILIES, unitOf, rankOf, factor, rungs, fmt, parseWhole, buildProblem, checkDir, checkNumber, hintsFor, solutionRows, generateSingle, generateMixed, makeRng, MIXED, amountRange,
-  Q, qeq, qshow, parseAmount, buildCustom, parseTyped, checkCustom, hintsCustom, solutionRowsCustom, lookupUnit, UNIT_OPTIONS, signalText, dirRow, DIRNAME, PREDICT, checkSplit, SPLITS, rangeFor, ladderUnits, isCal, canConvert, practiceOK, PRACTICE_MAX, sheetFact, aOne };
+  Q, qeq, qshow, parseAmount, buildCustom, parseTyped, checkCustom, hintsCustom, solutionRowsCustom, lookupUnit, UNIT_OPTIONS, RECALL, HUBS, planFactor, factorPath, connectLine, recallF, FACTHINTS, signalText, dirRow, DIRNAME, PREDICT, checkSplit, SPLITS, rangeFor, ladderUnits, isCal, canConvert, practiceOK, PRACTICE_MAX, sheetFact, aOne };
 </script>
 
 <!-- ======================= UI ======================= -->
@@ -964,7 +1085,7 @@ const pickState = Object.fromEntries(Object.keys(FAMILIES).map(f => [f, {}]));
 // session only (nothing saved): momentum, scaffolding fade per family, mixed-units unlock per family
 const S = { solved: 0, streak: 0, clean: {}, auto: {}, run: {}, mixed: {} };
 const FADE_AFTER = 3, UNLOCK_AFTER = 5;
-let fam = null, P = null, idx = 0, mode = "single", tries = {}, coach = {}, picked = {}, hintsShown = {}, gateLock = false, rightPick = null;
+let fam = null, P = null, idx = 0, mode = "single", tries = {}, coach = {}, picked = {}, hintsShown = {}, gateLock = false, rightPick = null, way = {};
 S.clean.custom = 0; S.auto.custom = true;
 for (const f of Object.keys(FAMILIES)) { S.clean[f] = 0; S.auto[f] = true; S.run[f] = 0; S.mixed[f] = false; }
 
@@ -1023,8 +1144,8 @@ function showPick() {
       return `<button class="unit-btn ${u.cal ? "cal" : ""} ${ps.to === u.id ? "on" : ""}" data-u="${u.id}" ${okP ? `onclick="pickTo('${u.id}')"` : `disabled title="${why}"`}>${cap(u.many)}<small>${!okP ? why : u.id === ps.from ? "same unit" : u.short}</small>${okP ? calTag(u) : ""}</button>`;
     }).join("");
     const notes = [];
-    if (big.some(u => !canConvert(fam, ps.from, u.id))) notes.push(ps.from === "month" ? "A month isn't always the same number of days (28, 29, 30 or 31), so months only change to years." : ps.from === "year" ? "Your sheet changes years into months, weeks, or days." : "Months aren't a set number of days or weeks, so they only go with years. Years go with weeks and days.");
-    if (big.some(u => canConvert(fam, ps.from, u.id) && !practiceOK(fam, ps.from, u.id))) notes.push("“Too big” ones (like 1 day = 86,400 seconds) work in ✏️ My own problem.");
+    if (big.some(u => !canConvert(fam, ps.from, u.id))) notes.push(ps.from === "month" ? "A month isn't always the same number of days (28, 29, 30 or 31), so months only change to years." : ps.from === "year" ? "Years change into months, weeks, or days." : "Months aren't a set number of days or weeks, so they only go with years. Years go with weeks and days.");
+    if (big.some(u => canConvert(fam, ps.from, u.id) && !practiceOK(fam, ps.from, u.id))) notes.push("“Too big” ones (like days to seconds) work in ✏️ My own problem.");
     document.getElementById("toNote").innerHTML = notes.join(" ");
   }
   document.getElementById("goBtn").disabled = !(ps.from && ps.to);
@@ -1044,7 +1165,7 @@ function nextProblem() {
 }
 function load(p) { fam = p.fam;
   P = p; P.revealed = false; P.hintTaps = 0; P.wrongs = 0; P.finished = false; P.fadedNow = false; P.unlockedNow = false;
-  idx = 0; tries = {}; coach = {}; picked = {}; hintsShown = {}; gateLock = false; rightPick = null;
+  idx = 0; tries = {}; coach = {}; picked = {}; hintsShown = {}; gateLock = false; rightPick = null; way = {}; P.way = way; P.lines = (P.lines || []).slice();
   show("mainScreen");
   document.getElementById("solution").classList.add("hidden");
   const F = FAMILIES[fam];
@@ -1059,7 +1180,7 @@ const hintsOf = s => (P && P.custom ? hintsCustom(s) : hintsFor(s));
 function advance() { if (idx >= P.steps.length - 1) return; idx++; rightPick = null; if (P.steps[idx].type === "done") finish(); render(); }
 function goBack() {
   if (!P || idx === 0) return;
-  [idx, idx - 1].forEach(i => { delete coach[i]; delete tries[i]; delete picked[i]; });
+  [idx, idx - 1].forEach(i => { delete coach[i]; delete tries[i]; delete picked[i]; delete way[i]; });
   idx--; gateLock = false; rightPick = null; render();
 }
 function finish() {
@@ -1080,12 +1201,15 @@ function pickDir(d) {
   if (r.ok) { rightPick = d; delete coach[idx]; render(); setTimeout(() => { if (rightPick === d && P.steps[idx] === s) advance(); }, 700); return; }
   (picked[idx] || (picked[idx] = [])).push(d); coach[idx] = r.msg; P.wrongs++; render();
 }
+function pickWay(w) { const s = P.steps[idx]; if (s.type !== "connect") return; way[idx] = w; delete coach[idx]; render(); const e = document.getElementById("answerInput"); if (e) e.focus(); }
 function submitAnswer() {
   const s = P.steps[idx];
   if (s.type === "split") return submitSplit();
-  if (s.type !== "factor" && s.type !== "calc") return;
+  if (!["factor", "calc", "connect", "chain"].includes(s.type)) return;
+  if (s.type === "connect" && !way[idx]) return;
   const el = document.getElementById("answerInput"), raw = el.value;
   const r = P.custom ? checkCustom(s, raw) : checkNumber(s, raw);
+  if (r.ok && s.type === "connect") P.lines[s.lineIdx] = connectLine(fam, s, way[idx]);   // the paper line follows the way the kid chose
   if (r.ok) { delete coach[idx]; if (P.custom && P.steps[idx + 1].type === "gate") paperForm(/\d\.\d|^\.\d/.test(raw)); advance(); return; }
   coach[idx] = r.msg;
   if (!r.empty && (r.bad || parseWhole(raw) !== null)) {
@@ -1139,25 +1263,27 @@ function renderLadder() {
   const dir = curDir();
   const lo = calPath ? 99 : Math.min(rankOf(fam, s0.from), rankOf(fam, s0.to)), hi = Math.max(rankOf(fam, s0.from), rankOf(fam, s0.to));
   const fromIds = P.spec.parts ? P.spec.parts.map(p => p.unit) : [s0.from];
+  // a rung's number shows only after the student has found that fact in this problem
+  const known = new Set(P.steps.slice(0, idx).filter(x => ["factor", "connect", "chain"].includes(x.type)).map(x => x.big + ">" + x.small));
+  const hubs = P.steps.slice(0, idx + 1).filter(x => x.type === "connect" || (x.type === "factor" && x.path)).map(x => x.hub || (P.steps.some(c => c.type === "connect" && c.hub === x.small) ? x.small : null)).filter(Boolean);
   let h = `<div class="ladder-title">📋 ${F.name} ladder</div><div class="lad">`;
   us.forEach((u, i) => {
     const isFrom = fromIds.includes(u.id), isTo = u.id === P.spec.to || u.id === P.spec.toBig;
-    const cls = isTo && dir ? "to" : isFrom ? "from" : isTo ? "to" : "";
-    h += `<div class="lu ${cls}" data-u="${u.id}">${isFrom && isTo ? `<span class="tagu">same</span>` : isFrom ? `<span class="tagu">from</span>` : isTo ? `<span class="tagu">to</span>` : ""}${u.many} <small>(${u.short})</small></div>`;
+    const isHub = !isFrom && !isTo && hubs.includes(u.id);
+    const cls = isTo && dir ? "to" : isFrom ? "from" : isTo ? "to" : isHub ? "hub" : "";
+    h += `<div class="lu ${cls}" data-u="${u.id}">${isFrom && isTo ? `<span class="tagu">same</span>` : isFrom ? `<span class="tagu">from</span>` : isTo ? `<span class="tagu">to</span>` : isHub ? `<span class="tagu">bridge</span>` : ""}${u.many} <small>(${u.short})</small></div>`;
     const nx = us[i + 1];
     if (nx) {
       const r = rankOf(fam, u.id), on = dir && dir !== "same" && r <= hi && r - 1 >= lo;
       const arrow = on ? (dir === "down" ? "⬇" : "⬆") : "↕";
-      h += `<div class="rung ${on ? "path" : ""}"><span class="l">${arrow} 1 ${u.short} = ${fmt(u.size / nx.size)} ${nx.short === nx.one ? name(nx, u.size / nx.size) : nx.short}</span><span class="s">${on ? arrow : ""}${fmt(u.size / nx.size)}</span></div>`;
+      const k = known.has(u.id + ">" + nx.id), n = u.size / nx.size;
+      h += `<div class="rung ${on ? "path" : ""} ${k ? "known" : ""}" data-r="${u.id}>${nx.id}"><span class="l">${arrow} 1 ${u.short} = ${k ? fmt(n) : "?"} ${nx.short === nx.one ? (k ? name(nx, n) : nx.many) : nx.short}</span><span class="s">${on ? arrow : ""}${k ? fmt(n) : ""}</span></div>`;
     }
   });
   h += `</div>`;
   const tagFor = u => { const isFrom = fromIds.includes(u.id), isTo = u.id === P.spec.to || u.id === P.spec.toBig; return [isFrom && isTo ? "from to" : isFrom ? "from" : isTo ? "to" : "", isFrom && isTo ? "same" : isFrom ? "from" : isTo ? "to" : ""]; };
   const cal = F.units.filter(u => u.cal);
   if (cal.length) h += `<div class="lad-cal"><span class="cal-l">📅 Off the ladder:</span>${[...cal].reverse().map(u => { const [c, t] = tagFor(u); return `<div class="lu ${c}" data-u="${u.id}">${t ? `<span class="tagu">${t}</span>` : ""}${u.many} <small>(${u.short})</small></div>`; }).join("")}</div>`;
-  // Thomas's reference sheet, word for word; the line for this problem's fact is highlighted
-  const fs = P.steps.filter(x => x.type === "factor").map(x => x.big + ">" + x.small);
-  h += `<div class="lad-extra" id="sheet"><div class="sheet-t">📄 Reference sheet</div>${F.sheet.map(([txt, big, facts]) => `<div class="sheet-l ${facts.some(([sm]) => fs.includes(big + ">" + sm)) ? "hit" : ""}">${txt}</div>`).join("")}</div>`;
   const el = document.getElementById("ladder"); el.innerHTML = h; el.classList.toggle("go", !!dir);
 }
 // the two signals: the kid's prediction + the operation, side by side, for the rest of the problem
@@ -1188,9 +1314,29 @@ function render() {
     html += `<div class="preds">${["down", "up", "same"].map(d => `<button class="choice pred ${d === "same" ? "same" : ""} ${wrong.has(d) ? "wrong" : ""} ${rightPick === d ? "right" : ""}" data-dir="${d}" data-pred="${PREDICT[d]}" ${wrong.has(d) ? "disabled" : ""} onclick="pickDir('${d}')"><span class="sym">${wrong.has(d) ? "✗" : rightPick === d ? "✓" : { down: "📈", up: "📉", same: "=" }[d]}</span><span>${DIRNAME[d]}<small>${{ down: "more of them", up: "fewer of them", same: "same unit" }[d]}</small></span></button>`).join("")}</div>`;
     html += coachBlock + hintBlock;
   } else if (s.type === "factor") {
-    const B = unitOf(fam, s.big), Sm = unitOf(fam, s.small);
+    const B = unitOf(fam, s.big), Sm = unitOf(fam, s.small), nxt = P.steps[idx + 1], prev = P.steps[idx - 1];
     html += s.up ? `<div class="ask">How many <b>${Sm.many}</b> make <b>1 ${B.one}</b>?</div>` : `<div class="ask">How many <b>${Sm.many}</b> are in <b>1 ${B.one}</b>?</div>`;
-    html += `<div class="sub">Use the ladder.</div><div class="input-area"><span class="work">1 ${B.short} =</span>${input(`${Sm.many} in 1 ${B.one}`, Sm.short)}</div>`;
+    let sub = "Think about what you know.";
+    if (s.path && nxt && nxt.type === "factor" && nxt.small === s.small) sub = `${cap(Sm.many)} are the bridge: change both units into ${Sm.many}. First, 1 ${B.one}.`;
+    else if (s.path && nxt && nxt.type === "connect") sub = `Now the other unit, also in ${Sm.many}.`;
+    else if (s.path && nxt && nxt.type === "factor") sub = "One fact at a time. Start with this one.";
+    else if (s.path && prev && (prev.type === "factor" || prev.type === "chain") && prev.small === s.big) sub = `Next fact: from ${B.many} to ${Sm.many}.`;
+    html += `<div class="sub">${sub}</div><div class="input-area"><span class="work">1 ${B.short} =</span>${input(`${Sm.many} in 1 ${B.one}`, Sm.short)}</div>`;
+    html += triesBlock + coachBlock + hintBlock;
+  } else if (s.type === "connect") {
+    const B = unitOf(fam, s.big), Sm = unitOf(fam, s.small), Hb = unitOf(fam, s.hub), w = way[idx];
+    html += `<div class="ask">Connect them: how many <b>${Sm.many}</b> are in <b>1 ${B.one}</b>?</div><div class="sub found">You found: 1 ${B.one} = ${fmt(s.a)} ${Hb.short} · 1 ${Sm.one} = ${fmt(s.b)} ${Hb.short}</div>`;
+    if (!w) html += `<div class="sub">Pick a way. Both give the same answer.</div><div class="ways"><button class="choice way" data-way="mul" onclick="pickWay('mul')"><span class="sym">?</span><span>? × ${fmt(s.b)} = ${fmt(s.a)}<small>What number times ${fmt(s.b)} equals ${fmt(s.a)}?</small></span></button><button class="choice way" data-way="div" onclick="pickWay('div')"><span class="sym">÷</span><span>${fmt(s.a)} ÷ ${fmt(s.b)}<small>How many ${fmt(s.b)}s are in ${fmt(s.a)}?</small></span></button></div>`;
+    else {
+      const box2 = `<input id="answerInput" inputmode="numeric" autocomplete="off" aria-label="${Sm.many} in 1 ${B.one}" onkeydown="if(event.key==='Enter') submitAnswer()">`;
+      html += w === "mul" ? `<div class="input-area"><span class="work">${box2} × ${fmt(s.b)} = ${fmt(s.a)}</span><button class="check" onclick="submitAnswer()">Check</button></div>` : `<div class="input-area"><span class="work">${fmt(s.a)} ÷ ${fmt(s.b)} =</span>${box2}<button class="check" onclick="submitAnswer()">Check</button></div>`;
+      html += `<div class="sub">So 1 ${B.one} = that many ${Sm.many}. <button class="link" id="otherWay" onclick="pickWay('${w === "mul" ? "div" : "mul"}')">Try the other way</button></div>`;
+    }
+    html += triesBlock + coachBlock + hintBlock;
+  } else if (s.type === "chain") {
+    const A = unitOf(fam, s.big), M = unitOf(fam, s.mid), Sm = unitOf(fam, s.small);
+    html += `<div class="ask">Put them together: how many <b>${Sm.many}</b> are in <b>1 ${A.one}</b>?</div><div class="sub found">You found: 1 ${A.one} = ${fmt(s.a)} ${M.many} · 1 ${M.one} = ${fmt(s.b)} ${Sm.many}</div>`;
+    html += `<div class="input-area"><span class="work">${fmt(s.a)} × ${fmt(s.b)} =</span>${input(`${Sm.many} in 1 ${A.one}`, Sm.short)}</div>`;
     html += triesBlock + coachBlock + hintBlock;
   } else if (s.type === "calc") {
     const Sm = unitOf(fam, s.small);
@@ -1202,6 +1348,8 @@ function render() {
     else if (s.op === "half") { ask = "Now take half"; work = `${fmt(s.a)} ÷ 2 =`; }
     else if (s.op === "same") { ask = "Same unit: what's the number?"; work = `${P.given} =`; }
     else { ask = `Add the parts (both in ${Sm.many} now)`; work = `${N(s.a)} + ${N(s.b)} =`; }
+    const pv = P.steps[idx - 1], fromPath = pv && (pv.type === "connect" || pv.type === "chain") && (s.op === "×" || s.op === "÷");
+    if (fromPath) ask = `Now the whole problem: 1 ${unitOf(fam, pv.big).one} = ${fmt(pv.value)} ${name(unitOf(fam, pv.small), pv.value)}. ${s.op === "×" ? "× Multiply" : "÷ Divide"}`;
     html += `<div class="ask">${ask}</div><div class="input-area"><span class="work">${work}</span>${input("Your answer", s.op === "×" || s.op === "+" || s.op === "half" || s.op === "same" ? Sm.short : unitOf(fam, s.big).short)}</div>`;
     if (P.custom && s.op === "÷" && !(s.value.d === 1n)) html += `<div class="mini-note">It won't come out even. You can type a fraction (2 1/2), a decimal (2.5), or a remainder (2 R 2).</div>`;
     html += triesBlock + coachBlock + hintBlock;
@@ -1212,7 +1360,7 @@ function render() {
     html += triesBlock + coachBlock + hintBlock;
   } else if (s.type === "gate") {
     html += `<div class="did">✓ Correct! ${P.given} = ${answerHTML()}</div>`;
-    html += `<div class="gate-head">✏️ Write it on your paper</div><div class="gate-text">Write this on your paper:</div><div class="gate-line" id="gateLine">${P.line}</div>`;
+    html += `<div class="gate-head">✏️ Write it on your paper</div>${P.lines && P.lines.length ? `<div class="gate-text">Write these lines on your paper, one under the other:</div><ol class="gate-steps" id="gateSteps">${P.lines.map(l => `<li>${l}</li>`).join("")}</ol><div class="gate-line" id="gateLine">${P.line}</div>` : `<div class="gate-text">Write this on your paper:</div><div class="gate-line" id="gateLine">${P.line}</div>`}`;
     if (P.alt && P.alt.length) html += `<div class="gate-note" id="altNote">Same amount, written other ways: <b>${P.alt.join("</b> or <b>")}</b>. Use the way your worksheet asks for.</div>`;
     html += `<label class="gate-check"><input type="checkbox" id="gateBox" onchange="gateTapped(this)" onkeydown="if(event.key==='Enter'){this.checked=true;gateTapped(this)}"> I wrote it</label>`;
   }
@@ -1233,7 +1381,7 @@ function render() {
   } else fin.classList.add("hidden");
 
   document.getElementById("backBtn").disabled = idx === 0;
-  const hb = document.getElementById("hintBtn"), hintable = ["dir", "factor", "calc", "split"].includes(s.type);
+  const hb = document.getElementById("hintBtn"), hintable = ["dir", "factor", "calc", "split", "connect", "chain"].includes(s.type);
   hb.className = (hintable ? "" : "hidden ") + (S.auto[hkey()] ? "auto" : "faded");
   hb.disabled = !hs.length || shown >= hs.length;
   hb.textContent = !hs.length || shown < hs.length ? (shown ? `💡 Another hint (${shown}/${hs.length})` : "💡 Hint") : "💡 No more hints";
