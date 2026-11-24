@@ -189,7 +189,16 @@
   .question { font-size: 1.6rem; font-weight: bold; line-height: 1.3; }
   .dirbadge { display: inline-block; margin-top: 8px; padding: 4px 14px; border-radius: 999px; font-weight: bold; font-size: 1.05rem; }
   .dirbadge.down { background: #e6f6ea; color: #1e7e34; } .dirbadge.up { background: #f3e8ff; color: #6f42c1; } .dirbadge.same { background: #eef1f4; color: #555; }
-  .dirbadge.unknown { background: #eef1f4; color: #888; font-weight: normal; }
+  .dirbadge.unknown { background: #eef1f4; color: #666; font-weight: normal; }
+  .dirbadge .sig { display: inline-block; } .dirbadge .sarr { margin: 0 4px; } .dirbadge .op { font-size: 1.35rem; }
+  .dirbadge.lit { animation: signalOn 0.45s ease-out; }
+  .dirbadge.down, .dirbadge.up, .dirbadge.same { font-size: 1.2rem; padding: 5px 16px; }
+  @keyframes signalOn { from { transform: scale(0.9); opacity: 0.4; } to { transform: scale(1); opacity: 1; } }
+  .preds { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+  .choice.pred { min-width: 170px; min-height: 70px; font-size: 1.35rem; font-weight: bold; text-align: left; }
+  .choice.pred small { display: block; font-size: 0.85rem; font-weight: normal; opacity: 0.85; }
+  .choice.pred.same { min-width: 0; min-height: 0; font-size: 1rem; font-weight: normal; flex-basis: 100%; max-width: 360px; }
+  @media (prefers-reduced-motion: reduce) { .dirbadge.lit { animation: none; } }
   .dirs { display: flex; flex-direction: column; gap: 10px; align-items: center; margin-top: 8px; }
   .dirs .choice { min-width: 330px; justify-content: flex-start; }
   .unitlabel { font-size: 1.3rem; font-weight: bold; color: #555; }
@@ -208,6 +217,8 @@
     .lad-cal { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; margin-top: 4px; padding-top: 3px; } .cal-l { font-size: 0.75rem; }
     .question { font-size: 1.3rem; } .gate-line { white-space: normal; font-size: 1.35rem; } .work { font-size: 1.4rem; } .input-area input { width: 110px; }
     .dirs .choice { min-width: 0; width: 100%; }
+    .choice.pred { min-width: 0; flex: 1 1 140px; font-size: 1.2rem; } .choice.pred.same { flex-basis: 100%; max-width: none; }
+    .dirbadge .sarr { margin: 0 2px; }
     .unit-btn { min-width: 0; padding: 8px 12px; font-size: 1rem; }
     .cu-amt { width: 100px; } .usel { font-size: 1rem; } #answerInput2 { width: 80px; font-size: 1.4rem; } .input-area input { width: 80px; }
   }
@@ -479,15 +490,19 @@ function buildProblem(spec) {
 }
 
 /* ---------- checking ---------- */
-const DIRNAME = { down: "⬇ Down to a smaller unit: multiply", up: "⬆ Up to a bigger unit: divide", same: "= Same unit: no change" };
+// The kid predicts what happens to the NUMBER; the operation sign then lights up.
+// (internally the step answer is still "down" / "up" / "same": the ladder movement)
+const DIRNAME = { down: "Bigger", up: "Smaller", same: "Stays the same" };
+const PREDICT = { down: "bigger", up: "smaller", same: "same" };
+const OPNAME = { down: "× Multiply", up: "÷ Divide", same: "Same unit" };
+function signalText(d) { return d === "down" ? "✔ Bigger → × Multiply" : d === "up" ? "✔ Smaller → ÷ Divide" : d === "same" ? "✔ Stays the same → Same unit, nothing to change" : "🤔 Bigger or smaller? Predict first, then you'll see × or ÷."; }
 function checkDir(s, pick) {
   if (pick === s.answer) return { ok: true };
   const F = unitOf(s.fam, s.from), T = unitOf(s.fam, s.to);
-  if (s.answer === "same") return { ok: false, msg: `You're changing ${F.many} to ${T.many}. That's the <b>same unit</b>, so the number doesn't change.` };
-  if (pick === "same") return { ok: false, msg: `${cap(F.many)} and ${T.many} are different units. Find them both on the ladder.` };
-  const look = isCal(s.fam, s.from) || isCal(s.fam, s.to) ? "Look at the table" : "Look at the ladder";
-  if (s.answer === "down") return { ok: false, msg: `${look}: ${T.many} are <b>lower</b> (smaller) than ${F.many}. Each ${F.one} holds lots of ${T.many}, so you'll end up with <b>more</b> ${T.many}. More of a smaller unit → <b>multiply</b>.` };
-  return { ok: false, msg: `${look}: ${T.many} are <b>higher</b> (bigger) than ${F.many}. It takes lots of ${F.many} to make one ${T.one}, so you'll end up with <b>fewer</b> ${T.many}. Fewer of a bigger unit → <b>divide</b>.` };
+  if (s.answer === "same") return { ok: false, msg: `You're changing ${F.many} to ${T.many}. That's the <b>same unit</b>, so the number <b>stays the same</b>.` };
+  if (pick === "same") return { ok: false, msg: `${cap(F.many)} and ${T.many} are different sizes, so the number changes. Are ${T.many} smaller pieces or bigger pieces than ${F.many}?` };
+  if (s.answer === "down") return { ok: false, msg: `${cap(T.many)} are smaller pieces than ${F.many}, so you need <b>more</b> of them. The number gets <b>bigger</b>.` };
+  return { ok: false, msg: `${cap(T.many)} are bigger pieces than ${F.many}, so you need <b>fewer</b> of them. The number gets <b>smaller</b>.` };
 }
 function checkNumber(s, raw) {
   if (String(raw == null ? "" : raw).trim() === "") return { ok: false, empty: true, msg: "Type your answer in the box first." };
@@ -500,8 +515,8 @@ function checkNumber(s, raw) {
     for (let i = 0; i < rs.length - 1; i++) { acc *= rs[i].f; if (v === acc) { msg = `That's how many ${rs[i].to.many} are in 1 ${rs[0].from.one}. Keep going down the ladder to ${unitOf(s.fam, s.small).many}.`; break; } }
     if (rs.length === 1 && v !== s.value) msg = `Check the ladder: find 1 ${unitOf(s.fam, s.big).one} = ? ${unitOf(s.fam, s.small).many}.`;
   } else if (s.op === "×" && v === s.a + s.b) msg = "That's what you get when you add. This one is multiplication.";
-  else if (s.op === "×" && s.b !== 0 && v * s.b === s.a) msg = "Careful: going down the ladder, you get <b>more</b> units. Multiply.";
-  else if (s.op === "÷" && v === s.a * s.b) msg = "Careful: going up the ladder, you get <b>fewer</b> units. Divide.";
+  else if (s.op === "×" && s.b !== 0 && v * s.b === s.a) msg = "Careful: the number should get <b>bigger</b> here. × <b>Multiply</b>.";
+  else if (s.op === "÷" && v === s.a * s.b) msg = "Careful: the number should get <b>smaller</b> here. ÷ <b>Divide</b>.";
   else if (s.op === "half" && v === s.a * 2) msg = "Half means cut it in half: <b>divide by 2</b>.";
   return { ok: false, msg };
 }
@@ -528,10 +543,10 @@ function hintsFor(s) {
   const fam = s.fam;
   if (s.type === "dir") {
     const F = unitOf(fam, s.from), T = unitOf(fam, s.to);
-    if (s.answer === "same") return [H("rule", `${cap(F.many)} to ${T.many}: it's the same unit! Nothing needs to change.`)];
+    if (s.answer === "same") return [H("rule", `${cap(F.many)} to ${T.many}: it's the same unit! The number stays the same.`)];
     const where = rankOf(fam, s.to) < rankOf(fam, s.from) ? "below" : "above";
-    return [H("rule", "Going to a smaller unit? You'll need MORE of them, so multiply. Going to a bigger unit? You'll need FEWER, so divide."),
-            isCal(fam, s.from) || isCal(fam, s.to) ? H("point", `A ${rankOf(fam, s.to) < rankOf(fam, s.from) ? F.one : T.one} is longer than a ${rankOf(fam, s.to) < rankOf(fam, s.from) ? T.one : F.one}. Check the table: 1 year = 12 months = 52 weeks = 365 days.`) : H("point", `On the ladder, ${T.many} are ${where} ${F.many}.`)];
+    return [H("rule", "Smaller pieces? You need MORE of them: the number gets bigger, so × multiply. Bigger pieces? You need FEWER: the number gets smaller, so ÷ divide."),
+            isCal(fam, s.from) || isCal(fam, s.to) ? H("point", `A ${rankOf(fam, s.to) < rankOf(fam, s.from) ? F.one : T.one} is longer than a ${rankOf(fam, s.to) < rankOf(fam, s.from) ? T.one : F.one}. Check the table: 1 year = 12 months = 52 weeks = 365 days.`) : H("point", `On the ladder, ${T.many} are ${where} ${F.many}: ${where === "below" ? "smaller" : "bigger"} pieces.`)];
   }
   if (s.type === "factor") {
     const rs = rungs(fam, s.big, s.small), B = unitOf(fam, s.big), S = unitOf(fam, s.small);
@@ -602,10 +617,15 @@ function hintsFor(s) {
 }
 
 /* ---------- whole worked solution ---------- */
+function dirRow(fam, s) {
+  const F = unitOf(fam, s.from), T = unitOf(fam, s.to);
+  if (s.answer === "same") return `Same unit (${T.many}): the number stays the same.`;
+  return s.answer === "down" ? `× Multiply: ${T.many} are smaller pieces than ${F.many}, so the number gets bigger.` : `÷ Divide: ${T.many} are bigger pieces than ${F.many}, so the number gets smaller.`;
+}
 function solutionRows(p) {
   const rows = [];
   for (const s of p.steps) {
-    if (s.type === "dir") rows.push(s.answer === "same" ? `${cap(unitOf(p.fam, s.from).many)} to ${unitOf(p.fam, s.to).many}: same unit, no change.` : s.answer === "down" ? `Going down the ladder to a smaller unit (${unitOf(p.fam, s.to).many}): multiply.` : `Going up the ladder to a bigger unit (${unitOf(p.fam, s.to).many}): divide.`);
+    if (s.type === "dir") rows.push(dirRow(p.fam, s));
     if (s.type === "factor") rows.push(`1 ${unitOf(p.fam, s.big).one} = ${fmt(s.value)} ${name(unitOf(p.fam, s.small), s.value)}`);
     if (s.type === "split") rows.push(`${fmt(s.a)} ÷ ${fmt(s.b)} = ${fmt(s.q)} R ${fmt(s.r)}`);
     if (s.type === "calc") rows.push(s.op === "same" ? `${fmt(s.a)} stays ${fmt(s.value)}` : s.op === "half" ? `Half of ${fmt(s.a)} = ${fmt(s.value)}` : `${fmt(s.a)} ${s.op} ${fmt(s.b)} = ${fmt(s.value)}`);
@@ -890,8 +910,8 @@ function checkCustom(s, raw, raw2) {
   if (!q) return { ok: false, msg: "Type a number, like 12, 2.5, or 2 1/2." };
   if (qeq(q, s.value)) return { ok: true };
   let msg = "Not quite. Try again!";
-  if (s.op === "×" && qeq(q, qdiv(s.a, s.b))) msg = "Careful: going down the ladder, you get <b>more</b> units. Multiply.";
-  else if (s.op === "÷" && qeq(q, qmul(s.a, s.b))) msg = "Careful: going up the ladder, you get <b>fewer</b> units. Divide.";
+  if (s.op === "×" && qeq(q, qdiv(s.a, s.b))) msg = "Careful: the number should get <b>bigger</b> here. × <b>Multiply</b>.";
+  else if (s.op === "÷" && qeq(q, qmul(s.a, s.b))) msg = "Careful: the number should get <b>smaller</b> here. ÷ <b>Divide</b>.";
   else if (s.op === "÷" && qeq(q, qfloor(s.value)) && !qint(s.value)) msg = `That's the whole ${unitOf(s.fam, s.big).many}. There's some left over too: write it as a fraction or decimal, like 2 1/2 or 2.5, or as 2 R 2.`;
   return { ok: false, bad: true, msg };
 }
@@ -924,7 +944,7 @@ function hintsCustom(s) {
 function solutionRowsCustom(p) {
   const rows = [], sh = q => qshow(q, p.dm).h;
   for (const s of p.steps) {
-    if (s.type === "dir") rows.push(s.answer === "same" ? "Same unit: no change." : s.answer === "down" ? `${cap(unitOf(p.fam, s.from).many)} → ${unitOf(p.fam, s.to).many}: down the ladder, multiply.` : `${cap(unitOf(p.fam, s.from).many)} → ${unitOf(p.fam, s.to).many}: up the ladder, divide.`);
+    if (s.type === "dir") rows.push(dirRow(p.fam, s));
     if (s.type === "factor") rows.push(`1 ${unitOf(p.fam, s.big).one} = ${fmt(s.value)} ${name(unitOf(p.fam, s.small), s.value)}`);
     if (s.type === "calc") rows.push(s.op === "same" ? `${sh(s.a)} stays ${sh(s.value)}` : `${sh(s.a)} ${s.op} ${sh(s.b)} = ${sh(s.value)}`);
     if (s.type === "split") rows.push(`${sh(s.a)} ÷ ${sh(s.b)} = ${sh(s.q)} R ${sh(s.r)}`);
@@ -935,7 +955,7 @@ function solutionRowsCustom(p) {
 const UNIT_OPTIONS = Object.entries(FAMILIES).map(([f, F]) => ({ fam: f, label: F.name, units: [...F.units].reverse().map(u => ({ key: `${f}:${u.id}`, label: `${u.many} (${u.short})` })) }));
 
 if (typeof module !== "undefined") module.exports = { FAMILIES, unitOf, rankOf, factor, rungs, fmt, parseWhole, buildProblem, checkDir, checkNumber, hintsFor, solutionRows, generateSingle, generateMixed, makeRng, MIXED, amountRange,
-  Q, qeq, qshow, parseAmount, buildCustom, parseTyped, checkCustom, hintsCustom, solutionRowsCustom, lookupUnit, UNIT_OPTIONS, checkSplit, SPLITS, rangeFor, ladderUnits, isCal, canConvert, practiceOK, PRACTICE_MAX, sheetFact, aOne };
+  Q, qeq, qshow, parseAmount, buildCustom, parseTyped, checkCustom, hintsCustom, solutionRowsCustom, lookupUnit, UNIT_OPTIONS, signalText, dirRow, DIRNAME, PREDICT, checkSplit, SPLITS, rangeFor, ladderUnits, isCal, canConvert, practiceOK, PRACTICE_MAX, sheetFact, aOne };
 </script>
 
 <!-- ======================= UI ======================= -->
@@ -1022,7 +1042,7 @@ function nextProblem() {
   if (mode === "mixed") load(generateMixed(fam, Math.random, q));
   else { const ps = pickState[fam]; load(generateSingle(fam, ps.from, ps.to, Math.random, q)); }
 }
-function load(p) {
+function load(p) { fam = p.fam;
   P = p; P.revealed = false; P.hintTaps = 0; P.wrongs = 0; P.finished = false; P.fadedNow = false; P.unlockedNow = false;
   idx = 0; tries = {}; coach = {}; picked = {}; hintsShown = {}; gateLock = false; rightPick = null;
   show("mainScreen");
@@ -1057,7 +1077,7 @@ function finish() {
 function pickDir(d) {
   const s = P.steps[idx]; if (s.type !== "dir" || rightPick) return;
   const r = checkDir(s, d);
-  if (r.ok) { rightPick = d; delete coach[idx]; render(); setTimeout(() => { if (rightPick === d && P.steps[idx] === s) advance(); }, 500); return; }
+  if (r.ok) { rightPick = d; delete coach[idx]; render(); setTimeout(() => { if (rightPick === d && P.steps[idx] === s) advance(); }, 700); return; }
   (picked[idx] || (picked[idx] = [])).push(d); coach[idx] = r.msg; P.wrongs++; render();
 }
 function submitAnswer() {
@@ -1140,13 +1160,20 @@ function renderLadder() {
   h += `<div class="lad-extra" id="sheet"><div class="sheet-t">📄 Reference sheet</div>${F.sheet.map(([txt, big, facts]) => `<div class="sheet-l ${facts.some(([sm]) => fs.includes(big + ">" + sm)) ? "hit" : ""}">${txt}</div>`).join("")}</div>`;
   const el = document.getElementById("ladder"); el.innerHTML = h; el.classList.toggle("go", !!dir);
 }
+// the two signals: the kid's prediction + the operation, side by side, for the rest of the problem
+function signalHTML(dir) {
+  if (!dir) return `<div class="dirbadge unknown" id="dirBadge">${signalText(null)}</div>`;
+  const [pred, op] = dir === "same" ? ["✔ Stays the same", "Same unit, nothing to change"] : dir === "down" ? ["✔ Bigger", "× Multiply"] : ["✔ Smaller", "÷ Divide"];
+  const fresh = P.steps[idx] && P.steps[idx].type === "dir" && rightPick ? "lit" : "";   // animate only the moment it lights up
+  return `<div class="dirbadge ${dir} ${fresh}" id="dirBadge" aria-label="${signalText(dir)}"><span class="sig" id="predSig">${pred}</span> <span class="sarr">→</span> <span class="sig op" id="opSig">${op}</span></div>`;
+}
 function answerHTML() { return P.answerT ? P.answerT.h : `${fmt(P.answer)} ${name(unitOf(fam, P.spec.to), P.answer)}`; }
 function render() {
   const s = P.steps[idx];
   renderLadder();
   const dir = curDir();
   document.getElementById("qcard").innerHTML = `<div class="question" id="question">${P.question}</div>` +
-    (dir ? `<div class="dirbadge ${dir}" id="dirBadge">${dir === "down" ? "⬇ Down the ladder to a smaller unit → multiply ×" : dir === "up" ? "⬆ Up the ladder to a bigger unit → divide ÷" : "= Same unit → no change"}</div>` : `<div class="dirbadge unknown" id="dirBadge">Which way on the ladder? ⬆ or ⬇</div>`);
+    signalHTML(dir);
   const box = document.getElementById("step");
   let html = "";
   const hs = hintsOf(s), shown = hintsShown[idx] || 0;
@@ -1157,8 +1184,8 @@ function render() {
   const triesBlock = (tries[idx] || []).length ? `<div class="tries">${tries[idx].map(v => `<span class="try">${v.replace(/</g, "&lt;")} ✗</span>`).join("")}</div>` : "";
   if (s.type === "dir") {
     const F = unitOf(fam, s.from), T = unitOf(fam, s.to), wrong = new Set(picked[idx] || []);
-    html += `<div class="ask">Which way on the ladder?</div><div class="sub">From <b>${P.spec.kind === "mixed" ? "bigger units" : F.many}</b> to <b>${T.many}</b></div>${P.custom && P.steps.filter(x => x.type === "dir").length > 1 ? `<div class="mini-note">This problem has more than one change. This one is ${F.many} → ${T.many}.</div>` : ""}`;
-    html += `<div class="dirs">${["down", "up", "same"].map(d => `<button class="choice ${wrong.has(d) ? "wrong" : ""} ${rightPick === d ? "right" : ""}" data-dir="${d}" ${wrong.has(d) ? "disabled" : ""} onclick="pickDir('${d}')"><span class="sym">${wrong.has(d) ? "✗" : rightPick === d ? "✓" : { down: "⬇", up: "⬆", same: "=" }[d]}</span>${DIRNAME[d].slice(2)}</button>`).join("")}</div>`;
+    html += `<div class="ask">Will the number get <b>bigger</b> or <b>smaller</b>?</div><div class="sub">From <b>${P.spec.kind === "mixed" ? "bigger units" : F.many}</b> to <b>${T.many}</b></div>${P.custom && P.steps.filter(x => x.type === "dir").length > 1 ? `<div class="mini-note">This problem has more than one change. This one is ${F.many} → ${T.many}.</div>` : ""}`;
+    html += `<div class="preds">${["down", "up", "same"].map(d => `<button class="choice pred ${d === "same" ? "same" : ""} ${wrong.has(d) ? "wrong" : ""} ${rightPick === d ? "right" : ""}" data-dir="${d}" data-pred="${PREDICT[d]}" ${wrong.has(d) ? "disabled" : ""} onclick="pickDir('${d}')"><span class="sym">${wrong.has(d) ? "✗" : rightPick === d ? "✓" : { down: "📈", up: "📉", same: "=" }[d]}</span><span>${DIRNAME[d]}<small>${{ down: "more of them", up: "fewer of them", same: "same unit" }[d]}</small></span></button>`).join("")}</div>`;
     html += coachBlock + hintBlock;
   } else if (s.type === "factor") {
     const B = unitOf(fam, s.big), Sm = unitOf(fam, s.small);
